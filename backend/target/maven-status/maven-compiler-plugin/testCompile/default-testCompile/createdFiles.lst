@@ -1,6 +1,0 @@
-com\company\ratelimiter\ratelimit\service\RateLimitEngineTest.class
-com\company\ratelimiter\access\service\AccessServiceTest.class
-com\company\ratelimiter\endpoint\service\EndpointServiceTest.class
-com\company\ratelimiter\metrics\service\MetricsServiceTest.class
-com\company\ratelimiter\ratelimit\service\RateLimitStateServiceConcurrencyTest$TestConfig.class
-com\company\ratelimiter\ratelimit\service\RateLimitStateServiceConcurrencyTest.class
