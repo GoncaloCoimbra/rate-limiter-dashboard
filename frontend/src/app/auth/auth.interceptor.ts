@@ -7,16 +7,12 @@ import { AuthService } from './auth.service';
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const token = auth.token();
-  const authenticatedRequest = token
-    ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : request;
-
-  return next(authenticatedRequest).pipe(catchError(error => {
-    if (error.status === 401 && !auth.isDemo() && !request.url.endsWith('/api/auth/login')) {
+  const isCurrentUserRequest = request.url.endsWith('/api/auth/me');
+  return next(request.clone({ withCredentials: true })).pipe(catchError(error => {
+    if (error.status === 401 && !request.url.endsWith('/api/auth/login') && !request.url.endsWith('/api/auth/logout') && !isCurrentUserRequest) {
       auth.logout();
       void router.navigate(['/login']);
-    } else if (error.status === 403) {
+    } else if (error.status === 403 && !isCurrentUserRequest) {
       void router.navigate(['/forbidden']);
     }
     return throwError(() => error);

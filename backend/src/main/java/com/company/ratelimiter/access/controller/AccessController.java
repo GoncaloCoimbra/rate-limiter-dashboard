@@ -18,8 +18,9 @@ public class AccessController {
     @PutMapping("/keys/{id}") public ApiKeyResponse updateKey(@PathVariable Long id, @Valid @RequestBody ApiKeyCreateRequest request, Authentication authentication) { return accessService.updateKey(id, request, authentication.getName()); }
     @PostMapping("/keys/{id}/revoke") public ApiKeyResponse revokeKey(@PathVariable Long id, Authentication authentication) { return accessService.revokeKey(id, authentication.getName()); }
     @DeleteMapping("/keys/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteKey(@PathVariable Long id, Authentication authentication) { accessService.deleteKey(id, authentication.getName()); }
-    @GetMapping("/clients") public List<ClientResponse> clients() { return accessService.listClients(); }
-    @PostMapping("/clients") @ResponseStatus(HttpStatus.CREATED) public ClientResponse createClient(@Valid @RequestBody AccessCreateRequest request) { return accessService.createClient(request); }
-    @PutMapping("/clients/{id}") public ClientResponse updateClient(@PathVariable Long id, @Valid @RequestBody AccessCreateRequest request) { return accessService.updateClient(id, request); }
-    @DeleteMapping("/clients/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteClient(@PathVariable Long id) { accessService.deleteClient(id); }
+    @GetMapping("/clients") public List<ClientResponse> clients(Authentication authentication) { return accessService.listClients(authentication.getName()); }
+    @GetMapping("/clients/{id}") public ClientResponse client(@PathVariable Long id, Authentication authentication) { return accessService.getClient(id, authentication.getName()); }
+    @PostMapping("/clients") @ResponseStatus(HttpStatus.CREATED) public ClientResponse createClient(@Valid @RequestBody AccessCreateRequest request, Authentication authentication) { return accessService.createClient(request, authentication.getName()); }
+    @PutMapping("/clients/{id}") public ClientResponse updateClient(@PathVariable Long id, @Valid @RequestBody AccessCreateRequest request, Authentication authentication) { return accessService.updateClient(id, request, authentication.getName()); }
+    @DeleteMapping("/clients/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteClient(@PathVariable Long id, Authentication authentication) { accessService.deleteClient(id, authentication.getName()); }
 }

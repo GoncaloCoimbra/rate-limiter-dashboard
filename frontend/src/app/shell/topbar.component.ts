@@ -17,11 +17,11 @@ import { ThemeService } from '../shared/theme.service';
         <label class="search">⌕<input [placeholder]="i18n.translate('search')" /><kbd>⌘ K</kbd></label>
         <select class="locale" [value]="i18n.locale()" (change)="changeLocale($any($event.target).value)"><option value="pt">🇵🇹 PT ▾</option><option value="en">🇬🇧 EN ▾</option><option value="zh">🇨🇳 中文 ▾</option></select>
         <div class="notification-wrap">
-          <button class="icon-button" aria-label="Notificações" (click)="toggleNotifications()"><lucide-icon [img]="Bell" size="18" /><em></em></button>
+          <button class="icon-button" aria-label="Notificações" (click)="toggleNotifications()"><lucide-icon [img]="Bell" size="18" /></button>
           <div class="notification-panel" *ngIf="notificationsOpen()">
-            <div class="notification-header"><strong>Notificações <span>{{ unreadCount() }}</span></strong><button (click)="markAllRead()">Marcar todas como lidas</button></div>
+            <div class="notification-header"><strong>Notificações <span>{{ unreadCount() }}</span></strong></div>
             <div class="notification" [class.read]="notification.read" *ngFor="let notification of notifications"><i [style.background]="notification.read ? 'var(--muted)' : notification.color"></i><div><strong>{{ notification.title }}</strong><small>{{ notification.description }}</small></div><button class="dismiss" aria-label="Fechar notificação" (click)="dismissNotification(notification.id)">×</button></div>
-            <button class="load-more" (click)="loadMoreNotifications()">Carregar mais</button>
+            <div class="notification-empty" *ngIf="!notifications.length">Sem notificações disponíveis.</div>
           </div>
         </div>
         <button class="icon-button" aria-label="Alternar tema" (click)="toggleTheme()"><lucide-icon [img]="isLight() ? Moon : Sun" size="18" /></button>
@@ -41,12 +41,7 @@ export class TopbarComponent {
   readonly Moon = Moon;
   readonly notificationsOpen = signal(false);
   readonly isLight = this.theme.isLight;
-  notifications = [
-    { id: 1, title: 'Taxa limite excedida', description: 'A política Authentication bloqueou pedidos.', color: 'var(--red)', read: false },
-    { id: 2, title: 'Política atualizada', description: 'A Premium API foi atualizada recentemente.', color: 'var(--cyan)', read: false },
-    { id: 3, title: 'Utilização elevada', description: 'A utilização média está a aproximar-se do limite.', color: 'var(--orange)', read: false },
-    { id: 4, title: 'Endpoint sob pressão', description: 'Um endpoint está perto do limite configurado.', color: 'var(--purple)', read: false }
-  ];
+  notifications: { id: number; title: string; description: string; color: string; read: boolean }[] = [];
   readonly currentPage = signal('dashboard');
 
   constructor() {
@@ -68,8 +63,4 @@ export class TopbarComponent {
   unreadCount(): number { return this.notifications.filter((notification) => !notification.read).length; }
   markAllRead(): void { this.notifications.forEach((notification) => notification.read = true); }
   dismissNotification(id: number): void { this.notifications = this.notifications.filter((notification) => notification.id !== id); }
-  loadMoreNotifications(): void {
-    const nextId = this.notifications.length + 1;
-    this.notifications = [...this.notifications, { id: nextId, title: 'Sincronização concluída', description: 'Os dados do workspace foram atualizados.', color: 'var(--cyan)', read: false }];
-  }
 }

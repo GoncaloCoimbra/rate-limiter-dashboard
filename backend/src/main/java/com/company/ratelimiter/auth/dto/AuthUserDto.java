@@ -4,9 +4,13 @@ import java.util.List;
 
 public class AuthUserDto {
     private Long id;
+    private String username;
     private String name;
     private String email;
     private List<String> roles;
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
     public Long getId() {
         return id;

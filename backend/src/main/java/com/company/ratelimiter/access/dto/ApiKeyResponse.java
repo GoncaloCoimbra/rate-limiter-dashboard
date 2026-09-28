@@ -3,6 +3,7 @@ package com.company.ratelimiter.access.dto;
 public class ApiKeyResponse {
     private Long id;
     private String name;
+    private String key;
     private String maskedKey;
     private String status;
     private String createdAt;
@@ -11,6 +12,8 @@ public class ApiKeyResponse {
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public String getKey() { return key; }
+    public void setKey(String key) { this.key = key; }
     public String getMaskedKey() { return maskedKey; }
     public void setMaskedKey(String maskedKey) { this.maskedKey = maskedKey; }
     public String getStatus() { return status; }

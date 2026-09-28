@@ -14,30 +14,37 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.company.ratelimiter.auth.service.JwtService;
+import com.company.ratelimiter.auth.service.TokenRevocationService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private final JwtService jwtService;
     private final ObjectProvider<UserDetailsService> users;
+    private final TokenRevocationService revocations;
 
-    public JwtAuthenticationFilter(JwtService jwtService, ObjectProvider<UserDetailsService> users) {
+    public JwtAuthenticationFilter(JwtService jwtService, ObjectProvider<UserDetailsService> users, TokenRevocationService revocations) {
         this.jwtService = jwtService;
         this.users = users;
+        this.revocations = revocations;
     }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
             throws ServletException, IOException {
-        String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ") && SecurityContextHolder.getContext().getAuthentication() == null) {
+        String token = tokenFromRequest(request);
+        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                var user = users.getObject().loadUserByUsername(jwtService.username(header.substring(7)));
+                if (revocations.isRevoked(jwtService.tokenId(token))) {
+                    throw new IllegalArgumentException("Token has been revoked");
+                }
+                var user = users.getObject().loadUserByUsername(jwtService.username(token));
                 var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -47,5 +54,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private String tokenFromRequest(HttpServletRequest request) {
+        // JWT auth is intentionally cookie-only. The application does not rely on Authorization
+        // bearer tokens for authenticated web requests, and allowing both channels widens the XSS
+        // and token-reuse surface unnecessarily. /api/public/** is rate-limit based, not JWT-authenticated.
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("rate-limiter-session".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

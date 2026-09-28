@@ -1,6 +1,7 @@
 package com.company.ratelimiter.auth.entity;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,6 +30,12 @@ public class AppUser {
     @Column(nullable = false, length = 20)
     private String role;
 
+    @Column(name = "password_reset_token", unique = true, length = 120)
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_expires_at")
+    private Instant passwordResetExpiresAt;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -46,4 +53,8 @@ public class AppUser {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public String getPasswordResetToken() { return passwordResetToken; }
+    public void setPasswordResetToken(String passwordResetToken) { this.passwordResetToken = passwordResetToken; }
+    public Instant getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
+    public void setPasswordResetExpiresAt(Instant passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 }

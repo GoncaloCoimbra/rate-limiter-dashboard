@@ -2,6 +2,7 @@ package com.company.ratelimiter.auth.service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -26,11 +27,23 @@ public class JwtService {
 
     public String generate(UserDetails user) {
         Date now = new Date();
-        return Jwts.builder().subject(user.getUsername()).issuedAt(now)
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(user.getUsername()).issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs)).signWith(key).compact();
     }
 
     public String username(String token) {
-        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject();
+        return claims(token).getSubject();
+    }
+
+    public String tokenId(String token) {
+        return claims(token).getId();
+    }
+
+    public Date expiration(String token) {
+        return claims(token).getExpiration();
+    }
+
+    private io.jsonwebtoken.Claims claims(String token) {
+        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 }

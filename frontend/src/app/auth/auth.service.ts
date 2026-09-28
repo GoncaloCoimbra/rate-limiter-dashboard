@@ -1,18 +1,25 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 
-interface LoginResponse { token: string; }
+interface LoginResponse { message: string; }
+export interface AuthUser { id: number; username: string; name: string; email: string; roles: string[]; }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly tokenKey = 'rate-limiter-jwt';
-  private readonly demoKey = 'rate-limiter-demo';
+  readonly user = signal<AuthUser | null>(null);
 
   login(username: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>('/api/auth/login', { username, password }).pipe(
-      tap(response => sessionStorage.setItem(this.tokenKey, response.token))
+    return this.http.post<LoginResponse>('/api/auth/login', { username, password }, { withCredentials: true }).pipe(
+      switchMap(response => this.http.get<AuthUser>('/api/auth/me', { withCredentials: true }).pipe(
+        tap(user => this.user.set(user)),
+        map(() => response),
+        catchError(error => {
+          this.user.set(null);
+          return throwError(() => error);
+        })
+      ))
     );
   }
 
@@ -24,9 +31,15 @@ export class AuthService {
     return this.http.post<{ message: string }>('/api/auth/forgot-password', { email });
   }
 
-  startDemo(): void { sessionStorage.setItem(this.demoKey, 'true'); }
-  logout(): void { sessionStorage.removeItem(this.tokenKey); sessionStorage.removeItem(this.demoKey); }
-  token(): string | null { return sessionStorage.getItem(this.tokenKey); }
-  isDemo(): boolean { return sessionStorage.getItem(this.demoKey) === 'true'; }
-  isAuthenticated(): boolean { return !!this.token() || this.isDemo(); }
+  loadCurrentUser(): Observable<AuthUser | null> {
+    return this.http.get<AuthUser>('/api/auth/me', { withCredentials: true }).pipe(
+      tap(user => this.user.set(user)),
+      catchError(() => {
+        this.user.set(null);
+        return of(null);
+      })
+    );
+  }
+
+  logout(): void { this.user.set(null); this.http.post('/api/auth/logout', {}, { withCredentials: true }).subscribe(); }
 }

@@ -2,6 +2,7 @@ package com.company.ratelimiter.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -31,9 +32,31 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Object>> dataIntegrityViolation(DataIntegrityViolationException exception) {
+        log.warn("Data integrity violation", exception);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Resource already exists or violates a constraint"));
+    }
+
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<ApiResponse<Object>> resourceConflict(ResourceConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidDomainStateException.class)
+    public ResponseEntity<ApiResponse<Object>> invalidDomainState(InvalidDomainStateException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiResponse.error(exception.getMessage()));
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiResponse<Object>> invalidCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid credentials"));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> notFound(ResourceNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

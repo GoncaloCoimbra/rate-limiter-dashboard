@@ -1,7 +1,8 @@
 package com.company.ratelimiter.ratelimit.service;
 
-import org.springframework.stereotype.Service;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -27,11 +28,11 @@ public class RateLimitStateService {
     }
 
     public RateLimitCheckResponse evaluate(String stateKey, RateLimitEvaluation evaluation) {
-        for (int attempt = 0; attempt < 3; attempt++) {
+        for (int attempt = 0; attempt < 10; attempt++) {
             try {
                 return transactionTemplate.execute(status -> evaluateInTransaction(stateKey, evaluation));
-            } catch (DataIntegrityViolationException exception) {
-                if (attempt == 2) {
+            } catch (DataIntegrityViolationException | CannotAcquireLockException exception) {
+                if (attempt == 9) {
                     throw exception;
                 }
                 Thread.yield();

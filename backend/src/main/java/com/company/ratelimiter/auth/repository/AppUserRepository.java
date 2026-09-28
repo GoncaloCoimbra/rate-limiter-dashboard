@@ -9,4 +9,5 @@ import com.company.ratelimiter.auth.entity.AppUser;
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByEmail(String email);
     boolean existsByEmail(String email);
+    Optional<AppUser> findByPasswordResetToken(String passwordResetToken);
 }

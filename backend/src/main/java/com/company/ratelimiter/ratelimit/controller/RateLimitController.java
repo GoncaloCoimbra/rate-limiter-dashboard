@@ -57,7 +57,7 @@ public class RateLimitController {
         RateLimitCheckResponse response = stateService.evaluate(stateKey, state -> rateLimitEngine.evaluate(
             policy.getAlgorithm().name(), policy.getLimit(), windowMs(policy.getWindow()), policy.getBurst(), state, now
         ));
-        eventService.recordDecision(policyId, clientKeyHash, response.isAllowed(), authentication.getName());
+        eventService.recordDecision(policy, clientKeyHash, response.isAllowed(), "POST /api/ratelimit/check");
         if (!response.isAllowed()) log.warn("Rate limit denied policyId={} owner={} clientKeyHash={}", policyId, authentication.getName(), clientKeyHash);
         return ApiResponse.ok(response);
     }

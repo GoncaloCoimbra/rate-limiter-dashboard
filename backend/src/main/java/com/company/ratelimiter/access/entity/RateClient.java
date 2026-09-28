@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class RateClient {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "owner_username", nullable = false, length = 160) private String ownerUsername;
     @Column(nullable = false, length = 120) private String name;
     @Column(nullable = false, unique = true, length = 120) private String identifier;
     @Column(nullable = false, length = 20) private String status;
@@ -17,6 +18,8 @@ public class RateClient {
     protected void onCreate() { createdAt = LocalDateTime.now(); }
 
     public Long getId() { return id; }
+    public String getOwnerUsername() { return ownerUsername; }
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getIdentifier() { return identifier; }

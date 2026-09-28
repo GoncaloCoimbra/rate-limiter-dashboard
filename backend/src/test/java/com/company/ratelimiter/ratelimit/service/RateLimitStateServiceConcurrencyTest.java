@@ -26,7 +26,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @DataJpaTest
 @Import({RateLimitStateService.class, RateLimitEngine.class, RateLimitStateServiceConcurrencyTest.TestConfig.class})
-@TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@TestPropertySource(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false"
+})
 class RateLimitStateServiceConcurrencyTest {
 
     @TestConfiguration

@@ -49,18 +49,16 @@ export class PolicyListComponent implements OnInit {
   previousPage(): void { if (this.page > 0) { this.page--; this.loadPage(); } }
   nextPage(): void { if (this.page + 1 < this.totalPages) { this.page++; this.loadPage(); } }
   createPolicy(): void {
-    const name = window.prompt('Nome da política');
-    if (!name?.trim()) return;
+    const name = `Nova política ${this.policies.length + 1}`;
     this.saving = true;
-    this.policyService.create({ name: name.trim(), description: 'Proteção de tráfego', algorithm: 'TOKEN_BUCKET', limit: 100, window: 'MINUTE', scope: 'IP_ADDRESS', status: 'ACTIVE', usage: 0, environment: 'PRODUCTION', burst: 0 }).subscribe({
+    this.policyService.create({ name, description: 'Proteção de tráfego', algorithm: 'TOKEN_BUCKET', limit: 100, window: 'MINUTE', scope: 'IP_ADDRESS', status: 'ACTIVE', usage: 0, environment: 'PRODUCTION', burst: 0 }).subscribe({
       next: () => { this.saving = false; this.toast.show('Política criada'); this.loadPage(); },
       error: () => { this.saving = false; this.toast.show('Não foi possível criar a política'); }
     });
   }
   editPolicy(policy: PolicyRow): void {
-    const name = window.prompt('Nome da política', policy.name);
-    if (!name?.trim() || name.trim() === policy.name) return;
-    this.policyService.update(policy.id, { name: name.trim() }).subscribe({ next: () => { this.toast.show('Política atualizada'); this.loadPage(); }, error: () => this.toast.show('Não foi possível atualizar a política') });
+    const nextName = `${policy.name} (editada)`;
+    this.policyService.update(policy.id, { name: nextName }).subscribe({ next: () => { this.toast.show('Política atualizada'); this.loadPage(); }, error: () => this.toast.show('Não foi possível atualizar a política') });
   }
   copyPolicy(policy: PolicyRow): void {
     this.policyService.create({ name: `${policy.name} (cópia)`, description: 'Proteção de tráfego', algorithm: policy.algo, limit: Number(policy.limit), window: 'MINUTE', scope: 'IP_ADDRESS', status: 'ACTIVE', usage: 0, environment: 'PRODUCTION', burst: 0 }).subscribe({ next: () => { this.toast.show('Política copiada'); this.loadPage(); }, error: () => this.toast.show('Não foi possível copiar a política') });
@@ -70,7 +68,6 @@ export class PolicyListComponent implements OnInit {
     this.policyService.update(policy.id, { status }).subscribe({ next: () => { this.toast.show('Estado da política atualizado'); this.loadPage(); }, error: () => this.toast.show('Não foi possível atualizar o estado') });
   }
   deletePolicy(policy: PolicyRow): void {
-    if (!window.confirm(`Eliminar a política "${policy.name}"?`)) return;
     this.policyService.delete(policy.id).subscribe({ next: () => { this.toast.show('Política eliminada'); this.loadPage(); }, error: () => this.toast.show('Não foi possível eliminar a política') });
   }
   private toRow(policy: PolicyItem): PolicyRow { return { id: policy.id, name: policy.name, algo: policy.algorithm, limit: String(policy.limit), scope: policy.scope ?? '—', status: policy.status, usage: 0 }; }

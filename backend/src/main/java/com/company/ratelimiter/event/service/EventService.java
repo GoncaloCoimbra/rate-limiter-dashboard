@@ -8,10 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
-import com.company.ratelimiter.event.dto.EventCreateRequest;
 import com.company.ratelimiter.event.dto.EventResponse;
 import com.company.ratelimiter.event.entity.RateLimitEvent;
 import com.company.ratelimiter.event.repository.EventRepository;
+import com.company.ratelimiter.policy.entity.RatePolicy;
 
 @Service
 public class EventService {
@@ -33,28 +33,15 @@ public class EventService {
         return eventRepository.findAllByOwnerUsername(ownerUsername, pageable).map(this::toResponse);
     }
 
-    public EventResponse ingestEvent(EventCreateRequest request, String ownerUsername) {
+    public EventResponse recordDecision(RatePolicy policy, String clientKeyHash, boolean allowed, String endpoint) {
         RateLimitEvent event = new RateLimitEvent();
-        Long occurredAt = request.getOccurredAt();
-        event.setOccurredAt(occurredAt == null ? System.currentTimeMillis() : occurredAt);
-        event.setReason(request.getReason());
-        event.setEndpoint(request.getEndpoint());
-        event.setStatus(request.getStatus());
-        event.setIpAddress(request.getIpAddress());
-        event.setPolicyId(request.getPolicyId());
-        event.setOwnerUsername(ownerUsername);
-        return toResponse(eventRepository.save(event));
-    }
-
-    public EventResponse recordDecision(Long policyId, String clientKeyHash, boolean allowed, String ownerUsername) {
-        RateLimitEvent event = new RateLimitEvent();
-        event.setOwnerUsername(ownerUsername);
+        event.setOwnerUsername(policy.getOwnerUsername());
         event.setOccurredAt(System.currentTimeMillis());
         event.setReason(allowed ? "REQUEST_ALLOWED" : "RATE_LIMIT_EXCEEDED");
-        event.setEndpoint("POST /api/ratelimit/check");
+        event.setEndpoint(endpoint);
         event.setStatus(allowed ? "ALLOWED" : "BLOCKED");
         event.setIpAddress(clientKeyHash);
-        event.setPolicyId(policyId);
+        event.setPolicyId(policy.getId());
         return toResponse(eventRepository.save(event));
     }
 

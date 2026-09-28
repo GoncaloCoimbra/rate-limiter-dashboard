@@ -1,12 +1,64 @@
-import { Component } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, inject, OnInit } from '@angular/core';
 import { GenericPageComponent, GenericRow } from '../shared/generic-page.component';
 
-@Component({ selector: 'app-settings', standalone: true, imports: [GenericPageComponent], template: `<app-generic-page eyebrow="WORKSPACE" title="Definições" description="Gira as preferências e integrações do workspace." panelTitle="Recursos ligados" firstHeader="Recurso" [rows]="rows" />` })
-export class SettingsComponent {
-  rows: GenericRow[] = [
-    { resource: 'API gateway', policy: 'Public API', status: 'Active', usage: 68 },
-    { resource: 'Authentication service', policy: 'Authentication', status: 'Active', usage: 82 },
-    { resource: 'Payments integration', policy: 'Internal Services', status: 'Active', usage: 56 },
-    { resource: 'Premium workspace', policy: 'Premium API', status: 'Active', usage: 42 }
-  ];
+interface DashboardSettingItem {
+  key: string;
+  value: string;
+  ownerUsername?: string;
+}
+
+@Component({
+  selector: 'app-settings',
+  standalone: true,
+  imports: [GenericPageComponent],
+  template: `
+    <app-generic-page
+      eyebrow="WORKSPACE"
+      title="Definições"
+      description="Gira as preferências e integrações do workspace."
+      panelTitle="Configurações pessoais"
+      firstHeader="Recurso"
+      [rows]="rows"
+      [loading]="loading"
+      [error]="error"
+      [searchable]="true"
+      [showDetails]="true"
+      [showActions]="false"
+    />
+  `
+})
+export class SettingsComponent implements OnInit {
+  private readonly http = inject(HttpClient);
+
+  rows: GenericRow[] = [];
+  loading = false;
+  error: string | null = null;
+
+  ngOnInit(): void {
+    this.loadSettings();
+  }
+
+  loadSettings(): void {
+    this.loading = true;
+    this.error = null;
+
+    this.http.get<DashboardSettingItem[]>('/api/settings').subscribe({
+      next: (items) => {
+        this.rows = items.map((item) => ({
+          resource: item.key,
+          policy: 'Pessoal',
+          status: 'Active',
+          usage: 100,
+          scope: item.value || '—'
+        }));
+        this.loading = false;
+      },
+      error: () => {
+        this.rows = [];
+        this.loading = false;
+        this.error = 'Não foi possível carregar as definições do workspace.';
+      }
+    });
+  }
 }

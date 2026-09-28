@@ -1,10 +1,34 @@
-import { Injectable, signal } from '@angular/core';
+import { AuthService, type AuthUser } from '../auth/auth.service';
+import { effect, inject, Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileStateService {
-  readonly name = signal(localStorage.getItem('profile-name') || 'Alex Silva');
-  readonly email = signal(localStorage.getItem('profile-email') || 'alex.silva@acme.com');
-  readonly photo = signal(localStorage.getItem('profile-photo'));
+  private readonly auth = inject(AuthService);
+  readonly name = signal('');
+  readonly email = signal('');
+  readonly photo = signal<string | null>(localStorage.getItem('profile-photo'));
+
+  constructor() {
+    effect(() => {
+      const user = this.auth.user();
+      this.syncFromUser(user);
+    });
+
+    this.name.set('');
+    this.email.set('');
+    this.photo.set(localStorage.getItem('profile-photo'));
+  }
+
+  syncFromUser(user: AuthUser | null): void {
+    if (user) {
+      this.name.set(user.name || user.username || '');
+      this.email.set(user.email || '');
+      return;
+    }
+
+    this.name.set('');
+    this.email.set('');
+  }
 
   update(name: string, email: string): void {
     this.name.set(name);

@@ -330,36 +330,6 @@ interface LoginFormValue {
               </button>
             </form>
 
-            <div class="divider">
-              <span>{{ text('or', 'ou') }}</span>
-            </div>
-
-            <button
-              type="button"
-              class="demo-button"
-              (click)="onEnterDemo()"
-              [disabled]="isBusy()"
-              [attr.aria-busy]="isDemoStarting()"
-            >
-              <span class="demo-icon" aria-hidden="true">
-                <svg viewBox="0 0 20 20">
-                  <path d="M10 2.8v3.6M10 13.6v3.6M2.8 10h3.6M13.6 10h3.6" />
-                  <circle cx="10" cy="10" r="3.2" />
-                </svg>
-              </span>
-              <span class="demo-copy">
-                <strong>{{ text('enterDemo', 'Explorar demo') }}</strong>
-                <small>{{ text('demoHint', 'Entrar sem configurar uma conta') }}</small>
-              </span>
-              @if (isDemoStarting()) {
-                <span class="button-spinner dark" aria-hidden="true"></span>
-              } @else {
-                <svg class="demo-arrow" viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M4 10h11M10 5l5 5-5 5" />
-                </svg>
-              }
-            </button>
-
             <p class="signup">
               {{ text('noAccount', 'Ainda não tem conta?') }}
               <a routerLink="/criar-conta" class="signup-link">
@@ -1402,7 +1372,6 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   readonly showPassword = signal(false);
   readonly isSubmitting = signal(false);
-  readonly isDemoStarting = signal(false);
   readonly error = signal('');
 
   readonly availableLocales: Array<{ value: Locale; label: string }> = [
@@ -1422,7 +1391,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   isBusy(): boolean {
-    return this.isSubmitting() || this.isDemoStarting();
+    return this.isSubmitting();
   }
 
   text(
@@ -1465,8 +1434,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         signingIn: 'A entrar…',
         signIn: 'Entrar no workspace',
         or: 'ou',
-        enterDemo: 'Explorar demo',
-        demoHint: 'Entrar sem configurar uma conta',
         noAccount: 'Ainda não tem conta?',
         createAccount: 'Criar conta',
         helpQuestion: 'Precisa de ajuda?',
@@ -1513,8 +1480,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         signingIn: 'Signing in…',
         signIn: 'Sign in to workspace',
         or: 'or',
-        enterDemo: 'Explore demo',
-        demoHint: 'Enter without setting up an account',
         noAccount: 'New here?',
         createAccount: 'Create account',
         helpQuestion: 'Need help?',
@@ -1557,8 +1522,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         signingIn: '正在登录…',
         signIn: '进入工作区',
         or: '或',
-        enterDemo: '体验演示',
-        demoHint: '无需配置账户即可进入',
         noAccount: '还没有账户？',
         createAccount: '创建账户',
         helpQuestion: '需要帮助？',
@@ -1776,18 +1739,4 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
-  onEnterDemo(): void {
-    if (this.isBusy()) return;
-
-    this.clearError();
-    this.isDemoStarting.set(true);
-    this.auth.startDemo();
-
-    const returnUrl =
-      this.route.snapshot.queryParamMap.get('returnUrl') || '/';
-
-    setTimeout(() => {
-      void this.router.navigateByUrl(returnUrl);
-    }, 250);
-  }
 }
