@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit } from '@angular/core';
 import { GenericPageComponent, GenericRow } from '../shared/generic-page.component';
+import { TranslationService } from '../shared/translation.service';
 
 interface DashboardSettingItem {
   key: string;
@@ -19,6 +20,8 @@ interface DashboardSettingItem {
       description="Gira as preferências e integrações do workspace."
       panelTitle="Configurações pessoais"
       firstHeader="Recurso"
+      [emptyStateTitle]="'noPersonalSettingsTitle'"
+      [emptyStateHint]="'noPersonalSettingsHint'"
       [rows]="rows"
       [loading]="loading"
       [error]="error"
@@ -30,6 +33,7 @@ interface DashboardSettingItem {
 })
 export class SettingsComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  readonly i18n = inject(TranslationService);
 
   rows: GenericRow[] = [];
   loading = false;

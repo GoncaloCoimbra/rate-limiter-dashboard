@@ -1,3 +1,5 @@
+![Demonstração do fluxo: criar política, emitir API key e bloquear pedidos acima do limite](frontend/public/rate-limit-flow.gif)
+
 # Rate Limiter Dashboard
 
 A rate-limiting service with a management dashboard. Policies define the limits, API keys are bound to a policy, and requests to `/api/public/**` are actually enforced (HTTP 429 when the limit is exceeded). Every decision is stored as an event.
@@ -26,9 +28,11 @@ cp .env.example .env    # then replace every placeholder
 docker compose up --build
 ```
 
-- App: http://localhost
-- API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui.html
+- App: http://localhost:8083
+- API: http://localhost:8081
+- Swagger UI: http://localhost:8081/swagger-ui.html
+
+As portas expostas no host são configuráveis no `.env` através de `FRONTEND_PORT`, `BACKEND_PORT` e `MYSQL_PORT`; a allowlist `APP_SECURITY_CORS_ALLOWED_ORIGINS` acompanha a porta do frontend por omissão e pode ser definida no `.env` para hosts personalizados.
 
 Log in with `APP_SECURITY_USERNAME` / `APP_SECURITY_PASSWORD` from `.env`, or register a new account (role `USER`). Outside the `dev` profile the app refuses to start with default credentials or the default JWT secret.
 
@@ -80,7 +84,7 @@ GitHub Actions runs the backend build and tests against MySQL, plus the frontend
 - **Password reset is a development stub.** The link is returned in the API response and no email is sent.
 - **CSRF protection is disabled** and relies on `SameSite=Strict`. The `Secure` cookie only works over HTTPS or `localhost`.
 - **Swagger UI is public.** Restrict it before any real deployment.
-- **No observability:** no metrics, tracing, correlation IDs or structured logs.
+- **Limited observability:** rate-limit metrics and events are available, but there is no distributed tracing, correlation IDs or structured logging.
 - **Frontend:** no central store, the auth guard calls `/api/auth/me` on each navigation, and accessibility and mobile layouts were not audited.
 - **Alerts and Rate Limits:** the pages use recent event and policy data; dedicated alert-rule management and a separate rate-limit inventory are not implemented.
 - **Roles:** only `USER` and `ADMIN`, with tenancy by owner username and no workspaces.

@@ -61,7 +61,7 @@ interface LoginFormValue {
 
             <div class="product-visual" aria-hidden="true">
               <div class="visual-topline">
-                <span class="visual-kicker">TRAFFIC CONTROL</span>
+                <span class="visual-kicker">{{ i18n.translate('trafficControlVisual') }}</span>
                 <span class="visual-status">
                   <span class="status-dot"></span>
                   {{ text('active', 'ACTIVE') }}
@@ -76,28 +76,28 @@ interface LoginFormValue {
                 <span class="graph-node node-b"></span>
                 <span class="graph-node node-c"></span>
                 <span class="graph-node node-d"></span>
-                <span class="packet packet-a">GET /api</span>
-                <span class="packet packet-b">429 LIMIT</span>
-                <span class="packet packet-c">200 OK</span>
+                <span class="packet packet-a">{{ text('requestPacketGet', 'GET /api') }}</span>
+                <span class="packet packet-b">{{ text('requestPacketBlocked', '429 LIMIT') }}</span>
+                <span class="packet packet-c">{{ text('requestPacketAllowed', '200 OK') }}</span>
               </div>
 
               <div class="traffic-signal-strip">
-                <span><i></i> LIVE ENGINE</span>
-                <span>42 RULES</span>
-                <span>18ms AVG</span>
+                <span><i></i> {{ i18n.translate('liveEngine') }}</span>
+                <span>42 {{ i18n.translate('rulesCount') }}</span>
+                <span>18ms {{ i18n.translate('averageLatency') }}</span>
               </div>
 
               <div class="visual-footer">
                 <span>
-                  <small>DETECT</small>
-                  <strong>Traffic</strong>
+                  <small>{{ i18n.translate('detect') }}</small>
+                  <strong>{{ i18n.translate('trafficLabel') }}</strong>
                 </span>
                 <span>
-                  <small>LIMIT</small>
-                  <strong>Rules</strong>
+                  <small>{{ i18n.translate('limit') }}</small>
+                  <strong>{{ i18n.translate('rulesLabel') }}</strong>
                 </span>
                 <span>
-                  <small>PROTECT</small>
+                  <small>{{ i18n.translate('protect') }}</small>
                   <strong>API</strong>
                 </span>
               </div>
@@ -105,7 +105,7 @@ interface LoginFormValue {
           </div>
 
           <div class="showcase-footer">
-            <span>{{ text('showcaseFooterTagline', 'API traffic, under control.') }}</span>
+            <span>{{ i18n.translate('showcaseFooterTagline') }}</span>
             <span>© 2026 ratelimiter</span>
           </div>
         </div>
@@ -364,12 +364,25 @@ interface LoginFormValue {
     button, input, select { font: inherit; }
 
     .auth-page {
+      position: relative;
       min-height: 100dvh;
       display: grid;
       grid-template-columns: minmax(440px, 0.95fr) minmax(500px, 1.05fr);
       background:
-        radial-gradient(circle at 20% 10%, rgba(77, 208, 225, 0.08), transparent 34%),
-        #f5f8fb;
+        radial-gradient(circle at 18% 18%, rgba(123, 214, 255, 0.18), transparent 28%),
+        radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.16), transparent 18%),
+        linear-gradient(135deg, #edf3f8 0%, #e9eef4 18%, #f4f7fb 100%);
+      overflow: hidden;
+    }
+
+    .auth-page::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      pointer-events: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
     }
 
     .auth-showcase {
@@ -377,36 +390,39 @@ interface LoginFormValue {
       overflow: hidden;
       color: #effcff;
       background:
-        radial-gradient(circle at 15% 20%, rgba(77, 211, 229, 0.18), transparent 26%),
-        radial-gradient(circle at 90% 80%, rgba(21, 113, 147, 0.26), transparent 34%),
-        linear-gradient(160deg, #082d49 0%, #063f5d 48%, #075c78 100%);
+        linear-gradient(160deg, rgba(4, 20, 35, 0.96) 0%, rgba(7, 42, 68, 0.98) 55%, rgba(10, 82, 100, 0.96) 100%);
+      border-right: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: inset -1px 0 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
     }
 
     .auth-showcase::before {
       content: "";
       position: absolute;
       inset: 0;
-      opacity: 0.16;
+      opacity: 0.2;
       background-image:
         linear-gradient(rgba(255,255,255,0.09) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.09) 1px, transparent 1px);
-      background-size: 52px 52px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.75), transparent 94%);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 94%);
       pointer-events: none;
     }
 
     .auth-showcase::after {
       content: "";
       position: absolute;
-      width: 420px;
-      height: 420px;
-      right: -180px;
-      top: -150px;
+      width: 480px;
+      height: 480px;
+      right: -170px;
+      top: -160px;
       border-radius: 50%;
-      border: 1px solid rgba(142, 235, 240, 0.2);
+      border: 1px solid rgba(178, 241, 255, 0.22);
       box-shadow:
-        0 0 0 42px rgba(142, 235, 240, 0.045),
-        0 0 0 92px rgba(142, 235, 240, 0.025);
+        0 0 0 52px rgba(126, 227, 245, 0.05),
+        0 0 0 110px rgba(126, 227, 245, 0.025),
+        inset 0 0 32px rgba(255,255,255,0.04);
       pointer-events: none;
     }
 
@@ -426,6 +442,13 @@ interface LoginFormValue {
       gap: 11px;
       color: #f4fdff;
       text-decoration: none;
+      padding: 10px 14px 10px 10px;
+      border: 1px solid rgba(161, 235, 245, 0.18);
+      border-radius: 14px;
+      background: rgba(13, 33, 46, 0.2);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px rgba(4, 17, 29, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
     .brand-symbol {
@@ -458,6 +481,21 @@ interface LoginFormValue {
       width: min(570px, 100%);
       margin: auto 0;
       padding: 70px 0 44px;
+    }
+
+    .eyebrow,
+    .secure-badge,
+    .visual-topline,
+    .visual-footer,
+    .traffic-signal-strip,
+    .language-option,
+    .input-shell,
+    .submit-button,
+    .auth-card,
+    .auth-area-inner,
+    .showcase-inner {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .eyebrow {

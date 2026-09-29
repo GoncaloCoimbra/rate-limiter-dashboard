@@ -64,10 +64,9 @@ public class RateLimitEnforcementFilter extends OncePerRequestFilter {
             return;
         }
 
-        ApiKey apiKey = apiKeyRepository.findAllByStatus(ACTIVE).stream()
-                .filter(candidate -> sameApiKey(candidate.getKeyValue(), apiKeyValue))
-                .findFirst()
-                .orElse(null);
+        String clientKeyHash = hash(apiKeyValue);
+        ApiKey apiKey = apiKeyRepository.findByKeyValueAndStatus(clientKeyHash, ACTIVE)
+            .orElse(null);
         if (apiKey == null) {
             reject(response, HttpStatus.UNAUTHORIZED, "Invalid API key");
             return;
@@ -80,7 +79,6 @@ public class RateLimitEnforcementFilter extends OncePerRequestFilter {
             return;
         }
 
-        String clientKeyHash = hash(apiKeyValue);
         long now = System.currentTimeMillis();
         String stateKey = "policy:" + policy.getId() + ":api-key:" + clientKeyHash;
         RateLimitCheckResponse decision = stateService.evaluate(stateKey, state -> rateLimitEngine.evaluate(
@@ -121,13 +119,6 @@ public class RateLimitEnforcementFilter extends OncePerRequestFilter {
 
     private static void reject(HttpServletResponse response, HttpStatus status, String message) throws IOException {
         response.sendError(status.value(), message);
-    }
-
-    private static boolean sameApiKey(String storedValue, String incomingValue) {
-        if (storedValue == null || incomingValue == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(hash(storedValue).getBytes(StandardCharsets.UTF_8), hash(incomingValue).getBytes(StandardCharsets.UTF_8));
     }
 
     private static String hash(String value) {

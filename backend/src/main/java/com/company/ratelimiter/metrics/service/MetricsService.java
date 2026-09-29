@@ -1,9 +1,15 @@
 package com.company.ratelimiter.metrics.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import java.util.List;
 
+import com.company.ratelimiter.event.repository.EndpointActivityProjection;
 import com.company.ratelimiter.event.repository.EventRepository;
+import com.company.ratelimiter.event.repository.TrafficBucketProjection;
+import com.company.ratelimiter.metrics.dto.EndpointActivityDto;
 import com.company.ratelimiter.metrics.dto.MetricsComparisonDto;
+import com.company.ratelimiter.metrics.dto.MetricsBucketDto;
 import com.company.ratelimiter.metrics.dto.MetricsQueryDto;
 import com.company.ratelimiter.metrics.dto.MetricsSummaryDto;
 import com.company.ratelimiter.policy.repository.PolicyRepository;
@@ -37,5 +43,26 @@ public class MetricsService {
         comparison.setPrevious(getSummary(previous, ownerUsername));
         comparison.setDelta(comparison.getCurrent().getAverageRate() - comparison.getPrevious().getAverageRate());
         return comparison;
+    }
+
+    public List<MetricsBucketDto> getTrafficSeries(MetricsQueryDto query, String ownerUsername) {
+        long from = query.getFrom();
+        long to = query.getTo();
+        long bucketMillis = Math.max(1, (to - from) / 24);
+        return eventRepository.findTrafficBuckets(ownerUsername, from, to, bucketMillis).stream()
+                .map(this::toBucket)
+                .toList();
+    }
+
+    public List<EndpointActivityDto> getEndpointActivity(MetricsQueryDto query, String ownerUsername, int limit) {
+        List<EndpointActivityProjection> activity = eventRepository.findEndpointActivity(
+                ownerUsername, query.getFrom(), query.getTo(), PageRequest.of(0, Math.clamp(limit, 1, 20)));
+        return activity.stream()
+                .map(item -> new EndpointActivityDto(item.getEndpoint(), item.getRequestCount(), item.getBlockedRequests()))
+                .toList();
+    }
+
+    private MetricsBucketDto toBucket(TrafficBucketProjection bucket) {
+        return new MetricsBucketDto(bucket.getBucketStart(), bucket.getAllowedRequests(), bucket.getBlockedRequests());
     }
 }

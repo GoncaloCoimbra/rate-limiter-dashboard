@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { Download, Eye, LucideAngularModule, Trash2 } from 'lucide-angular';
 import { ToastService } from '../shared/toast.service';
+import { TranslationService } from '../shared/translation.service';
 
 interface ExportRecordItem {
   id: number;
@@ -19,24 +20,24 @@ interface ExportRecordItem {
     <section class="exports-page">
       <header class="page-header">
         <div>
-          <p>WORKSPACE</p>
-          <h1>Histórico de exportações</h1>
-          <span>Relatórios guardados e exportações anteriores.</span>
+          <p>{{ i18n.translate('workspace') }}</p>
+          <h1>{{ i18n.translate('exportHistory') }}</h1>
+          <span>{{ i18n.translate('exportHistoryTitle') }}</span>
         </div>
       </header>
 
       <div class="data-state loading" *ngIf="loading" role="status" aria-live="polite">
         <span class="state-icon" aria-hidden="true"><span class="state-pulse"></span></span>
         <div>
-          <strong>A carregar exportações</strong>
-          <p>Estamos a sincronizar os registos guardados do workspace.</p>
+          <strong>{{ i18n.translate('loadingData') }}</strong>
+          <p>{{ i18n.translate('loadingDataHint') }}</p>
         </div>
       </div>
 
       <div class="data-state error" *ngIf="error" role="alert">
         <span class="state-icon" aria-hidden="true">!</span>
         <div>
-          <strong>Não foi possível carregar os registos</strong>
+          <strong>{{ i18n.translate('errorLoadingData') }}</strong>
           <p>{{ error }}</p>
         </div>
       </div>
@@ -45,19 +46,19 @@ interface ExportRecordItem {
         <article class="panel">
           <div class="panel-heading">
             <div>
-              <h2>Relatórios guardados</h2>
-              <p>Ficheiros gerados neste workspace</p>
+              <h2>{{ i18n.translate('savedReports') }}</h2>
+              <p>{{ i18n.translate('generatedFiles') }}</p>
             </div>
           </div>
 
           <table *ngIf="exports.length; else emptyState">
             <thead>
               <tr>
-                <th>Tipo</th>
-                <th>Nome</th>
-                <th>Data</th>
-                <th>Linhas</th>
-                <th>Ações</th>
+                <th>{{ i18n.translate('type') }}</th>
+                <th>{{ i18n.translate('name') }}</th>
+                <th>{{ i18n.translate('date') }}</th>
+                <th>{{ i18n.translate('rows') }}</th>
+                <th>{{ i18n.translate('actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,13 +69,13 @@ interface ExportRecordItem {
                 <td>{{ item.rowCount }}</td>
                 <td>
                   <div class="actions">
-                    <button type="button" [disabled]="true" [title]="'Pré-visualização indisponível: a operação não existe no backend.'">
+                    <button type="button" [disabled]="true" [attr.aria-label]="i18n.translate('previewUnavailable')" [title]="i18n.translate('previewUnavailable')">
                       <lucide-icon [img]="Eye" size="15" />
                     </button>
-                    <button type="button" (click)="downloadCsv(item)">
+                    <button type="button" (click)="downloadCsv(item)" [attr.aria-label]="i18n.translate('downloadFile')">
                       <lucide-icon [img]="Download" size="15" />
                     </button>
-                    <button type="button" [disabled]="true" [title]="'Remoção indisponível: a API de remoção ainda não foi implementada.'">
+                    <button type="button" [disabled]="true" [attr.aria-label]="i18n.translate('removalUnavailable')" [title]="i18n.translate('removalUnavailable')">
                       <lucide-icon [img]="Trash2" size="15" />
                     </button>
                   </div>
@@ -85,17 +86,17 @@ interface ExportRecordItem {
 
           <ng-template #emptyState>
             <div class="empty-state">
-              <strong>Sem exportações guardadas</strong>
-              <p>Ainda não existem registos de exportação para este workspace.</p>
+              <strong>{{ i18n.translate('noSavedExports') }}</strong>
+              <p>{{ i18n.translate('noExportRecords') }}</p>
             </div>
           </ng-template>
         </article>
 
         <aside class="side-note">
           <span>✧</span>
-          <strong>Torne esta vista sua</strong>
-          <p>Configure a integração para adaptar esta área ao seu workspace.</p>
-          <button type="button" [disabled]="true" [title]="'Configuração indisponível: ainda não existe um endpoint para esta ação.'">Configure a integração</button>
+          <strong>{{ i18n.translate('customizeView') }}</strong>
+          <p>{{ i18n.translate('customizeViewHint') }}</p>
+          <button type="button" [disabled]="true" [title]="i18n.translate('integrationUnavailable')">{{ i18n.translate('configureIntegration') }}</button>
         </aside>
       </div>
     </section>
@@ -133,6 +134,7 @@ interface ExportRecordItem {
   ]
 })
 export class ExportsComponent implements OnInit {
+  readonly i18n = inject(TranslationService);
   private readonly http = inject(HttpClient);
   readonly toast = inject(ToastService);
   readonly Eye = Eye;
@@ -159,7 +161,7 @@ export class ExportsComponent implements OnInit {
       error: () => {
         this.exports = [];
         this.loading = false;
-        this.error = 'Não foi possível carregar o histórico de exportações.';
+        this.error = this.i18n.translate('exportsLoadError');
       }
     });
   }
@@ -173,6 +175,6 @@ export class ExportsComponent implements OnInit {
     link.download = item.fileName || 'export.csv';
     link.click();
     URL.revokeObjectURL(url);
-    this.toast.show('Ficheiro exportado com sucesso.');
+    this.toast.show(this.i18n.translate('exportSucceeded'));
   }
 }

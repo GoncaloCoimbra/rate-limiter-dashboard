@@ -126,6 +126,7 @@ public class AccessService {
         ApiKeyResponse response = new ApiKeyResponse();
         response.setId(key.getId());
         response.setName(key.getName());
+        response.setPolicyName(key.getRatePolicy() == null ? null : key.getRatePolicy().getName());
 
         String keyPrefix = key.getKeyPrefix();
         if (keyPrefix != null && !keyPrefix.isBlank()) {

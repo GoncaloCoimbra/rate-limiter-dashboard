@@ -220,6 +220,39 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .68);
+}
+
+.client-dialog {
+  width: min(440px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.client-dialog form {
+  display: grid;
+  gap: 10px;
+}
+
+.client-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 /* ── APP SHELL ── */
 .app-shell {
   display: flex;
@@ -278,6 +311,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   background: var(--card);
   border-bottom: 1px solid var(--border);
   color: var(--text);
+}
+
+.mobile-menu {
+  display: none;
+}
+
+.mobile-backdrop {
+  display: none;
 }
 
 .light-theme .topbar {
@@ -980,6 +1021,97 @@ textarea:focus {
 @media(max-width: 700px) {
   .metric-grid {
     grid-template-columns: repeat(2,1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  app-sidebar {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  app-sidebar.mobile-open {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  app-sidebar .sidebar,
+  app-sidebar .sidebar.collapsed {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 1;
+    width: min(290px, calc(100vw - 56px)) !important;
+    height: 100dvh;
+    flex-basis: min(290px, calc(100vw - 56px)) !important;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+  }
+
+  app-sidebar.mobile-open .sidebar {
+    transform: translateX(0);
+  }
+
+  app-sidebar .mobile-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: rgba(2, 10, 15, .62);
+    cursor: default;
+  }
+
+  .mobile-menu {
+    display: inline-grid !important;
+    place-items: center;
+    flex: 0 0 40px;
+  }
+
+  .topbar {
+    height: 68px;
+    gap: 8px;
+    padding: 0 14px !important;
+  }
+
+  .topbar .breadcrumbs span,
+  .topbar .breadcrumbs b,
+  .topbar .search {
+    display: none !important;
+  }
+
+  .top-actions {
+    gap: 7px !important;
+  }
+
+  .topbar .locale {
+    height: 38px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .topbar .icon-button {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .content {
+    padding: 22px 14px 36px !important;
+  }
+
+  .app-footer {
+    height: auto;
+    min-height: 48px;
+    gap: 8px;
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
   }
 }
 

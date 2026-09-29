@@ -17,9 +17,7 @@ import { EndpointService } from '../../services/endpoint.service';
       [loading]="loading"
       [error]="error"
       [searchable]="true"
-      [showActions]="true"
-      (primaryActionRequested)="handlePrimaryAction()"
-      (rowActionRequested)="handleRowAction($event)"
+      [showActions]="false"
       (searchRequested)="handleSearch($event)"
       (statusChanged)="handleStatusChange($event)"
     />
@@ -34,6 +32,16 @@ export class EndpointListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadEndpoints();
+  }
+
+  handleSearch(value: string): void {
+    // Search is handled by the shared GenericPageComponent.
+    void value;
+  }
+
+  handleStatusChange(status: string): void {
+    // Status filtering is handled by the shared GenericPageComponent.
+    void status;
   }
 
   loadEndpoints(): void {
@@ -60,21 +68,4 @@ export class EndpointListComponent implements OnInit {
     });
   }
 
-  handlePrimaryAction(): void {
-    // Real creation flow should be implemented in the parent or API when available.
-  }
-
-  handleRowAction(event: { action: string; row: GenericRow }): void {
-    // Parent-level action hooks are intentionally left to the real feature implementation.
-    console.debug('[EndpointListComponent] row action requested', event.action, event.row.resource);
-  }
-
-  handleSearch(search: string): void {
-    // The backend endpoint does not expose a dedicated search endpoint; local filtering is used instead.
-    console.debug('[EndpointListComponent] search requested', search);
-  }
-
-  handleStatusChange(status: string): void {
-    console.debug('[EndpointListComponent] status changed', status);
-  }
 }

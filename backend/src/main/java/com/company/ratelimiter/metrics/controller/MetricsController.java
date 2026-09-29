@@ -6,6 +6,11 @@ import com.company.ratelimiter.metrics.dto.MetricsSummaryDto;
 import com.company.ratelimiter.metrics.service.MetricsService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import java.util.List;
+import com.company.ratelimiter.metrics.dto.EndpointActivityDto;
+import com.company.ratelimiter.metrics.dto.MetricsBucketDto;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/metrics")
@@ -42,5 +47,35 @@ public class MetricsController {
         previous.setTo(previousTo);
 
         return metricsService.compare(current, previous, authentication.getName());
+    }
+
+    @GetMapping("/series")
+    public List<MetricsBucketDto> series(@RequestParam(required = false) Long from,
+                                        @RequestParam(required = false) Long to,
+                                        Authentication authentication) {
+        MetricsQueryDto query = range(from, to);
+        return metricsService.getTrafficSeries(query, authentication.getName());
+    }
+
+    @GetMapping("/endpoints")
+    public List<EndpointActivityDto> endpoints(@RequestParam(required = false) Long from,
+                                              @RequestParam(required = false) Long to,
+                                              @RequestParam(defaultValue = "5") int limit,
+                                              Authentication authentication) {
+        MetricsQueryDto query = range(from, to);
+        return metricsService.getEndpointActivity(query, authentication.getName(), limit);
+    }
+
+    private static MetricsQueryDto range(Long from, Long to) {
+        long now = System.currentTimeMillis();
+        long rangeFrom = from == null ? now - 24 * 60 * 60 * 1000L : from;
+        long rangeTo = to == null ? now : to;
+        if (rangeFrom > rangeTo) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from must not be after to");
+        }
+        MetricsQueryDto query = new MetricsQueryDto();
+        query.setFrom(rangeFrom);
+        query.setTo(rangeTo);
+        return query;
     }
 }

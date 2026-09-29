@@ -15,38 +15,48 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class RateLimitStateService {
+    private static final int INITIALIZATION_LOCK_COUNT = 64;
 
     private final RateLimitStateRepository repository;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final Object[] initializationLocks = new Object[INITIALIZATION_LOCK_COUNT];
 
     public RateLimitStateService(RateLimitStateRepository repository, ObjectMapper objectMapper,
                                  PlatformTransactionManager transactionManager) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        java.util.Arrays.setAll(initializationLocks, ignored -> new Object());
     }
 
     public RateLimitCheckResponse evaluate(String stateKey, RateLimitEvaluation evaluation) {
-        for (int attempt = 0; attempt < 10; attempt++) {
-            try {
-                return transactionTemplate.execute(status -> evaluateInTransaction(stateKey, evaluation));
-            } catch (DataIntegrityViolationException | CannotAcquireLockException exception) {
-                if (attempt == 9) {
-                    throw exception;
+        Object initializationLock = initializationLocks[Math.floorMod(stateKey.hashCode(), initializationLocks.length)];
+        synchronized (initializationLock) {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                try {
+                    return transactionTemplate.execute(status -> evaluateInTransaction(stateKey, evaluation));
+                } catch (DataIntegrityViolationException | CannotAcquireLockException exception) {
+                    if (attempt == 9) {
+                        throw exception;
+                    }
+                    Thread.yield();
                 }
-                Thread.yield();
             }
+            throw new IllegalStateException("Rate limit state evaluation failed");
         }
-        throw new IllegalStateException("Rate limit state evaluation failed");
     }
 
     private RateLimitCheckResponse evaluateInTransaction(String stateKey, RateLimitEvaluation evaluation) {
-        RateLimitStateEntity entity = repository.findForUpdate(stateKey).orElseGet(() -> {
+        if (!repository.existsByStateKey(stateKey)) {
             RateLimitStateEntity newEntity = new RateLimitStateEntity();
             newEntity.setStateKey(stateKey);
-            return newEntity;
-        });
+            newEntity.setState(write(new RateLimitState()));
+            repository.saveAndFlush(newEntity);
+        }
+
+        RateLimitStateEntity entity = repository.findForUpdate(stateKey)
+                .orElseThrow(() -> new IllegalStateException("Rate limit state could not be initialized"));
 
         RateLimitState current = read(entity.getState());
         RateLimitCheckResponse response = evaluation.evaluate(current);

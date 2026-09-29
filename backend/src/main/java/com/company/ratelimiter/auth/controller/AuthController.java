@@ -4,11 +4,11 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -21,10 +21,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.company.ratelimiter.auth.dto.LoginRequest;
-import com.company.ratelimiter.auth.dto.RegisterRequest;
 import com.company.ratelimiter.auth.dto.AuthUserDto;
 import com.company.ratelimiter.auth.dto.ForgotPasswordRequest;
+import com.company.ratelimiter.auth.dto.LoginRequest;
+import com.company.ratelimiter.auth.dto.RegisterRequest;
 import com.company.ratelimiter.auth.dto.ResetPasswordRequest;
 import com.company.ratelimiter.auth.exception.InvalidCredentialsException;
 import com.company.ratelimiter.auth.service.AppUserService;
@@ -32,8 +32,8 @@ import com.company.ratelimiter.auth.service.JwtService;
 import com.company.ratelimiter.auth.service.LoginAttemptService;
 import com.company.ratelimiter.auth.service.TokenRevocationService;
 
-import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")

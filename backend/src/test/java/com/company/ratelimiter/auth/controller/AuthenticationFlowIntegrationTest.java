@@ -36,6 +36,19 @@ class AuthenticationFlowIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
+    void apiDocumentationRequiresAnAdminSession() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isForbidden());
+
+        MvcResult login = login("test-admin@example.com", "initial-password-123");
+        jakarta.servlet.http.Cookie session = login.getResponse().getCookie("rate-limiter-session");
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/v3/api-docs").cookie(session))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void logoutRejectsTheSameSessionCookie() throws Exception {
         MvcResult login = login("test-admin@example.com", "initial-password-123");
         jakarta.servlet.http.Cookie session = login.getResponse().getCookie("rate-limiter-session");

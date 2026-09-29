@@ -2,14 +2,15 @@
 import { Router } from '@angular/router';
 import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { Activity, AlertTriangle, KeyRound, LucideAngularModule, ShieldCheck, SlidersHorizontal, Zap } from 'lucide-angular';
-import { MetricsService, MetricsSummary } from '../metrics/services/metrics.service';
+import { forkJoin, of } from 'rxjs';
+import { Activity, AlertTriangle, BookOpen, KeyRound, LucideAngularModule, ShieldCheck, SlidersHorizontal, Zap } from 'lucide-angular';
+import { EndpointActivity, MetricsComparison, MetricsService, MetricsSummary, TrafficBucket } from '../metrics/services/metrics.service';
 import { EventService, RateEventItem } from '../events/services/event.service';
 import { TranslationService } from '../shared/translation.service';
 import { ToastService } from '../shared/toast.service';
 
 interface DashboardMetrics { totalRequests: number; allowedRequests: number; blockedRequests: number; blockRate: number; activePolicies: number; eventsTracked: number; }
+type DashboardRange = 'lastHour' | 'lastSixHours' | 'today';
 
 @Component({
   selector: 'app-dashboard',
@@ -23,46 +24,46 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
           <h1>{{ i18n.translate('overviewTitle') }}</h1>
           <p class="subtitle">{{ i18n.translate('overviewDescription') }}</p>
         </div>
-        <button class="primary-button" (click)="createPolicy($event)">＋ {{ i18n.translate('createPolicy') }}</button>
+        <button class="primary-button" (click)="createPolicy($event)">{{ i18n.translate('createPolicy') }}</button>
       </header>
 
       <div class="filters surface-card">
         <strong>◷ &nbsp; {{ i18n.translate('dateRange') }}</strong>
         <div class="range-dropdown">
-          <button (click)="toggleRange($event)">{{ selectedRange() }} <span>⌄</span></button>
-          <div class="range-menu" [class.open]="rangeOpen()">
-            <button type="button" (click)="selectRange('Última hora', $event)">Última hora</button>
-            <button type="button" (click)="selectRange('Últimas 6 horas', $event)">Últimas 6 horas</button>
-            <button type="button" (click)="selectRange('Hoje', $event)">Hoje</button>
+          <button type="button" (click)="toggleRange($event)" [attr.aria-expanded]="rangeOpen()">{{ i18n.translate(selectedRange()) }} <span>⌄</span></button>
+          <div class="range-menu" [class.open]="rangeOpen()" role="menu">
+            <button type="button" role="menuitemradio" [attr.aria-checked]="selectedRange() === 'lastHour'" (click)="selectRange('lastHour', $event)">{{ i18n.translate('lastHour') }}</button>
+            <button type="button" role="menuitemradio" [attr.aria-checked]="selectedRange() === 'lastSixHours'" (click)="selectRange('lastSixHours', $event)">{{ i18n.translate('lastSixHours') }}</button>
+            <button type="button" role="menuitemradio" [attr.aria-checked]="selectedRange() === 'today'" (click)="selectRange('today', $event)">{{ i18n.translate('today') }}</button>
           </div>
         </div>
-        <label (click)="toggleComparison($event)" [class.active]="comparisonEnabled()"><i></i>{{ i18n.translate('compare') }}</label>
+        <button type="button" class="compare-toggle" role="switch" [attr.aria-checked]="comparisonEnabled()" (click)="toggleComparison($event)" [class.active]="comparisonEnabled()"><i aria-hidden="true"></i>{{ i18n.translate('compare') }}</button>
       </div>
 
       <div class="data-state loading" *ngIf="state() === 'loading'" role="status" aria-live="polite">
         <span class="state-icon" aria-hidden="true"><span class="state-pulse"></span></span>
         <div>
-          <strong>A carregar métricas do workspace</strong>
-          <p>Estamos a sincronizar eventos, políticas e limites em tempo real.</p>
+          <strong>{{ i18n.translate('loadingMetrics') }}</strong>
+          <p>{{ i18n.translate('loadingMetricsHint') }}</p>
         </div>
       </div>
 
       <div class="data-state error" *ngIf="state() === 'error'" role="alert">
         <span class="state-icon" aria-hidden="true">!</span>
         <div>
-          <strong>Não foi possível carregar os dados do workspace</strong>
-          <p>Verifique a ligação e tente novamente em alguns segundos.</p>
+          <strong>{{ i18n.translate('metricsErrorTitle') }}</strong>
+          <p>{{ i18n.translate('metricsErrorHint') }}</p>
         </div>
-        <button type="button" class="secondary-button" (click)="loadDashboard()">Tentar novamente</button>
+        <button type="button" class="secondary-button" (click)="loadDashboard()">{{ i18n.translate('retry') }}</button>
       </div>
 
       <div class="data-state empty" *ngIf="state() === 'empty'">
         <span class="state-icon" aria-hidden="true">◎</span>
         <div>
-          <strong>Ainda não existem eventos para apresentar</strong>
-          <p>Quando a API começar a receber tráfego, esta área mostra o comportamento real.</p>
+          <strong>{{ i18n.translate('noEventsTitle') }}</strong>
+          <p>{{ i18n.translate('noEventsHint') }}</p>
         </div>
-        <button type="button" class="primary-button" (click)="createPolicy($event)">Criar política</button>
+        <a routerLink="/documentacao" class="secondary-button"><lucide-icon [img]="BookOpen" size="16" aria-hidden="true" />{{ i18n.translate('dashboardHelpAction') }}</a>
       </div>
 
       <div class="metric-grid">
@@ -102,23 +103,39 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
         <article class="panel traffic">
           <div class="panel-heading">
             <div>
-              <h2>Pedidos ao longo do tempo</h2>
-              <p>A série temporal estará disponível quando a API de métricas a fornecer.</p>
+              <h2>{{ i18n.translate('trafficOverTime') }}</h2>
+              <p>{{ i18n.translate('trafficRangeHint', { range: i18n.translate(selectedRange()) }) }}</p>
             </div>
-            <button (click)="toggleRange($event)">{{ selectedRange() }}&nbsp;⌄</button>
+            <div class="chart-legend" [attr.aria-label]="i18n.translate('seriesLegend')">
+              <button type="button" [class.inactive]="!visibleSeries().allowed" [attr.aria-pressed]="visibleSeries().allowed" (click)="toggleSeries('allowed')"><i class="legend-allowed"></i>{{ i18n.translate('allowed') }}</button>
+              <button type="button" [class.inactive]="!visibleSeries().blocked" [attr.aria-pressed]="visibleSeries().blocked" (click)="toggleSeries('blocked')"><i class="legend-blocked"></i>{{ i18n.translate('blocked') }}</button>
+            </div>
           </div>
-          <div class="empty">Sem série temporal disponível para este período.</div>
+          <div class="traffic-chart" *ngIf="traffic.length; else noTraffic" role="img" [attr.aria-label]="i18n.translate('trafficChartLabel', { range: i18n.translate(selectedRange()), count: traffic.length })">
+            <div class="bar-column" *ngFor="let bucket of traffic">
+              <div class="bar-stack">
+                <span *ngIf="visibleSeries().allowed" class="traffic-bar allowed" [style.height.%]="barHeight(bucket.allowedRequests)" [attr.title]="i18n.translate('allowedTooltip', { count: bucket.allowedRequests })"></span>
+                <span *ngIf="visibleSeries().blocked" class="traffic-bar blocked" [style.height.%]="barHeight(bucket.blockedRequests)" [attr.title]="i18n.translate('blockedTooltip', { count: bucket.blockedRequests })"></span>
+              </div>
+              <small>{{ bucket.bucketStart | date:'HH:mm' }}</small>
+            </div>
+          </div>
+          <ng-template #noTraffic><div class="empty">{{ i18n.translate('noTraffic') }}</div></ng-template>
         </article>
 
         <article class="panel usage">
           <div class="panel-heading">
             <div>
-              <h2>Utilização dos limites</h2>
-              <p>Sem dados de utilização agregados.</p>
+              <h2>{{ i18n.translate('decisionsPeriod') }}</h2>
+              <p *ngIf="comparison() as compared">{{ comparisonSummary(compared) }}</p>
+              <p *ngIf="!comparison()">{{ i18n.translate('decisionDistribution') }}</p>
             </div>
-            <button class="refresh-btn" (click)="refreshUsage()" [disabled]="refreshing()" aria-label="Atualizar dados">⟳</button>
+            <button type="button" class="refresh-btn" (click)="refreshUsage()" [disabled]="refreshing() || state() === 'loading'" [attr.aria-label]="i18n.translate('refreshMetrics')">⟳</button>
           </div>
-          <div class="empty">A utilização por política será apresentada quando existir uma fonte de dados real.</div>
+          <div class="decision-row"><span>{{ i18n.translate('allowed') }}</span><strong>{{ metrics?.allowedRequests ?? 0 }}</strong></div>
+          <div class="decision-track"><i class="decision-allowed" [style.width.%]="decisionPercentage(metrics?.allowedRequests ?? 0)"></i></div>
+          <div class="decision-row"><span>{{ i18n.translate('blocked') }}</span><strong>{{ metrics?.blockedRequests ?? 0 }}</strong></div>
+          <div class="decision-track"><i class="decision-blocked" [style.width.%]="decisionPercentage(metrics?.blockedRequests ?? 0)"></i></div>
         </article>
       </div>
 
@@ -126,26 +143,31 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
         <article class="panel table-panel">
           <div class="panel-heading">
             <div>
-              <h2>Endpoints mais ativos</h2>
-              <p>Sem agregação de endpoints disponível.</p>
+              <h2>{{ i18n.translate('topEndpoints') }}</h2>
+              <p>{{ i18n.translate('topEndpointsHint') }}</p>
             </div>
-            <a routerLink="/endpoints">Ver todos ›</a>
+            <a routerLink="/endpoints">{{ i18n.translate('viewAll') }} ›</a>
           </div>
-          <div class="empty">Ainda não existem dados agregados de endpoints.</div>
+          <div class="endpoint-row" *ngFor="let endpoint of endpointActivity">
+            <code>{{ endpoint.endpoint }}</code>
+            <strong>{{ endpoint.requestCount }}</strong>
+            <small>{{ endpoint.blockedRequests }} {{ i18n.translate('blocked').toLowerCase() }}</small>
+          </div>
+          <div class="empty" *ngIf="!endpointActivity.length">{{ i18n.translate('noEndpoints') }}</div>
         </article>
 
         <article class="panel events">
           <div class="panel-heading">
             <div>
-              <h2>Eventos recentes</h2>
-              <p>Últimas decisões reais do rate limiter</p>
+              <h2>{{ i18n.translate('recentEvents') }}</h2>
+              <p>{{ i18n.translate('latestRateDecisions') }}</p>
             </div>
-            <a routerLink="/logs">Ver logs ›</a>
+            <a routerLink="/logs">{{ i18n.translate('logs') }} ›</a>
           </div>
           <div class="event" *ngFor="let event of events">
             <span class="event-dot" [class.blocked]="event.status.toLowerCase() === 'blocked'"></span>
             <div>
-              <strong>{{ event.status.toLowerCase() === 'blocked' ? 'Taxa limite excedida' : 'Pedido permitido' }}</strong>
+              <strong>{{ i18n.translate(event.status.toLowerCase() === 'blocked' ? 'eventBlocked' : 'eventAllowed') }}</strong>
               <small>{{ event.endpoint }}</small>
             </div>
             <time>{{ event.ipAddress }} · {{ event.occurredAt | date:'HH:mm' }}</time>
@@ -161,13 +183,24 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
       width: 100%;
       max-width: none;
       position: relative;
+      padding: 6px 4px 0;
     }
 
     .page-heading {
       display: flex;
       justify-content: space-between;
-      align-items: end;
+      align-items: center;
       gap: 24px;
+      padding: 24px 26px;
+      background: linear-gradient(135deg, rgba(17, 23, 30, 0.96), rgba(22, 27, 34, 0.9));
+      border-color: rgba(117, 145, 168, 0.22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 18px 24px rgba(0,0,0,0.18);
+      border-radius: 18px;
+    }
+
+    .page-heading > div {
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .eyebrow {
@@ -205,6 +238,8 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
       background: linear-gradient(135deg, var(--cyan), #58d7dd 60%, #88f0ee 100%);
       color: #06242a;
       box-shadow: 0 12px 18px rgba(53, 200, 207, 0.2);
+      white-space: nowrap;
+      margin-left: auto;
     }
 
     .secondary-button {
@@ -221,17 +256,18 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
     }
 
     .filters {
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 8px;
+      border: 1px solid rgba(117, 145, 168, 0.2);
+      background: linear-gradient(180deg, rgba(22,27,34,0.94), rgba(17,23,30,0.86));
+      border-radius: 12px;
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 12px 15px;
+      padding: 14px 18px;
       color: var(--muted);
       font-size: 13px;
       position: relative;
       z-index: 10;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
     }
 
     .filters strong { color: #b8c5cc; }
@@ -244,6 +280,12 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
       cursor: pointer;
       transition: all 0.2s ease;
     }
+
+    .filters .compare-toggle { display:flex; align-items:center; gap:9px; font-weight:500; }
+    .compare-toggle i { width:25px; height:14px; border-radius:20px; background:#263a43; position:relative; transition:background .2s ease; }
+    .compare-toggle i::after { content:''; position:absolute; width:10px; height:10px; left:2px; top:2px; border-radius:50%; background:#fff; transition:transform .2s ease; }
+    .compare-toggle.active i { background:#54dfc2; }
+    .compare-toggle.active i::after { transform:translateX(11px); background:#082328; }
 
     .filters button { min-width: 160px; text-align: left; }
     .filters button span { float: right; }
@@ -408,9 +450,16 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
       padding: 16px;
       position: relative;
       overflow: hidden;
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 10px;
+      border: 1px solid rgba(117, 145, 168, 0.18);
+      background: linear-gradient(180deg, rgba(22,27,34,0.96), rgba(16,22,29,0.9));
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 12px 18px rgba(2, 6, 23, 0.16);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(53, 200, 207, 0.25);
     }
 
     .metric-top {
@@ -445,9 +494,10 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
     .panel {
       padding: 20px;
       min-width: 0;
-      border: 1px solid var(--border);
-      background: var(--card);
+      border: 1px solid rgba(117, 145, 168, 0.18);
+      background: linear-gradient(180deg, rgba(22,27,34,0.96), rgba(16,22,29,0.9));
       border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 18px rgba(2, 6, 23, 0.12);
     }
 
     .panel-heading {
@@ -485,6 +535,31 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
 
     .panel-heading button:disabled { opacity: 0.5; cursor: not-allowed; }
     .refresh-btn { border: none !important; background: none !important; color: #aebbc3 !important; padding: 8px !important; }
+
+    .chart-legend { display:flex; gap:8px; }
+    .chart-legend button { display:flex; align-items:center; gap:6px; border:0; background:none; color:var(--muted); font-size:11px; cursor:pointer; }
+    .chart-legend button.inactive { opacity:.45; }
+    .chart-legend i { width:8px; height:8px; border-radius:50%; }
+    .legend-allowed,.decision-allowed { background:var(--cyan); }
+    .legend-blocked,.decision-blocked { background:var(--red); }
+    .traffic-chart { display:grid; grid-template-columns:repeat(24,minmax(12px,1fr)); gap:5px; min-width:420px; height:158px; align-items:end; padding-top:14px; }
+    .traffic { overflow:hidden; }
+    .traffic .panel-heading { min-height:36px; }
+    .bar-column { display:flex; min-width:0; height:100%; flex-direction:column; align-items:center; justify-content:end; gap:6px; }
+    .bar-stack { display:flex; align-items:end; justify-content:center; gap:2px; height:128px; width:100%; }
+    .traffic-bar { display:block; width:min(9px,45%); min-height:0; border-radius:3px 3px 0 0; transition:height .2s ease; }
+    .traffic-bar.allowed { background:var(--cyan); }
+    .traffic-bar.blocked { background:var(--red); }
+    .bar-column small { color:var(--muted); font-size:9px; white-space:nowrap; }
+    .decision-row { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin:18px 0 7px; }
+    .decision-row strong { color:var(--text); }
+    .decision-track { height:6px; overflow:hidden; border-radius:4px; background:var(--border); }
+    .decision-track i { display:block; height:100%; border-radius:inherit; transition:width .2s ease; }
+    .endpoint-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border); }
+    .endpoint-row:last-of-type { border-bottom:0; }
+    .endpoint-row code { overflow:hidden; color:var(--text); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+    .endpoint-row strong { font-size:12px; }
+    .endpoint-row small { color:var(--muted); font-size:10px; }
 
     .event {
       display: flex;
@@ -524,16 +599,24 @@ interface DashboardMetrics { totalRequests: number; allowedRequests: number; blo
       .page-heading { align-items: start; flex-direction: column; }
       .main-grid, .bottom-grid { grid-template-columns: 1fr; }
       .filters { flex-wrap: wrap; }
-      .metric-grid { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 480px) {
       .metric-grid { grid-template-columns: 1fr; }
       .page-heading h1 { font-size: 28px; }
+      .endpoint-row { grid-template-columns:minmax(0,1fr) auto; }
+      .endpoint-row small { grid-column:1/-1; }
+      .chart-legend { gap:2px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
     }
   `]
 })
 export class DashboardComponent implements OnInit {
+  readonly BookOpen = BookOpen;
   readonly i18n = inject(TranslationService);
   readonly toast = inject(ToastService);
   private readonly metricsService = inject(MetricsService);
@@ -541,15 +624,18 @@ export class DashboardComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly rangeOpen = signal(false);
-  readonly selectedRange = signal('Última hora');
+  readonly selectedRange = signal<DashboardRange>('lastHour');
   readonly refreshing = signal(false);
   readonly state = signal<'loading' | 'empty' | 'error' | 'success'>('loading');
   readonly comparisonEnabled = signal(false);
   readonly visibleSeries = signal({ allowed: true, blocked: true });
+  readonly comparison = signal<MetricsComparison | null>(null);
 
   summary: MetricsSummary | null = null;
   events: RateEventItem[] = [];
   metrics: DashboardMetrics | null = null;
+  traffic: TrafficBucket[] = [];
+  endpointActivity: EndpointActivity[] = [];
 
   readonly Activity = Activity;
   readonly ShieldCheck = ShieldCheck;
@@ -571,12 +657,28 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  loadDashboard(): void {
-    this.state.set('loading');
-    forkJoin({ summary: this.metricsService.summary(), events: this.eventService.list(0, 5) }).subscribe({
-      next: ({ summary, events }) => {
+  loadDashboard(refresh = false): void {
+    if (!refresh) this.state.set('loading');
+    const { from, to } = this.rangeBounds();
+    const duration = to - from;
+    const previousFrom = from - duration;
+    const comparisonRequest = this.comparisonEnabled()
+      ? this.metricsService.comparison(from, to, previousFrom, from)
+      : of(null);
+
+    forkJoin({
+      summary: this.metricsService.summary(from, to),
+      events: this.eventService.list(0, 5),
+      traffic: this.metricsService.trafficSeries(from, to),
+      endpoints: this.metricsService.endpointActivity(from, to),
+      comparison: comparisonRequest
+    }).subscribe({
+      next: ({ summary, events, traffic, endpoints, comparison }) => {
         this.summary = summary;
         this.events = events.content;
+        this.traffic = traffic;
+        this.endpointActivity = endpoints;
+        this.comparison.set(comparison);
         const total = summary.allowedRequests + summary.blockedRequests;
         this.metrics = {
           totalRequests: total,
@@ -587,14 +689,50 @@ export class DashboardComponent implements OnInit {
           eventsTracked: total
         };
         this.state.set(total === 0 && this.events.length === 0 ? 'empty' : 'success');
+        this.refreshing.set(false);
       },
       error: () => {
         this.summary = null;
         this.metrics = null;
         this.events = [];
+        this.traffic = [];
+        this.endpointActivity = [];
+        this.comparison.set(null);
         this.state.set('error');
+        this.refreshing.set(false);
       }
     });
+  }
+
+  private rangeBounds(): { from: number; to: number } {
+    const to = Date.now();
+    if (this.selectedRange() === 'today') {
+      const startOfDay = new Date(to);
+      startOfDay.setHours(0, 0, 0, 0);
+      return { from: startOfDay.getTime(), to };
+    }
+    const duration = this.selectedRange() === 'lastSixHours' ? 6 * 60 * 60 * 1000 : 60 * 60 * 1000;
+    return { from: to - duration, to };
+  }
+
+  comparisonSummary(comparison: MetricsComparison): string {
+    const locale = { pt: 'pt-PT', en: 'en-GB', zh: 'zh-CN' }[this.i18n.locale()];
+    const format = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const delta = `${comparison.delta > 0 ? '+' : ''}${format.format(comparison.delta)}`;
+    return this.i18n.translate('allowRate', {
+      rate: format.format(comparison.current.averageRate),
+      delta,
+    });
+  }
+
+  barHeight(value: number): number {
+    const maxValue = Math.max(1, ...this.traffic.map((bucket) => bucket.allowedRequests + bucket.blockedRequests));
+    return value === 0 ? 0 : Math.max(4, value / maxValue * 100);
+  }
+
+  decisionPercentage(value: number): number {
+    const total = this.metrics?.totalRequests ?? 0;
+    return total === 0 ? 0 : value / total * 100;
   }
 
   toggleRange(event?: Event): void {
@@ -602,18 +740,23 @@ export class DashboardComponent implements OnInit {
     this.rangeOpen.update((open) => !open);
   }
 
-  selectRange(range: string, event: Event): void {
+  selectRange(range: DashboardRange, event: Event): void {
     event.stopPropagation();
     this.selectedRange.set(range);
     this.rangeOpen.set(false);
     this.loadDashboard();
-    this.toast.show(`Período: ${range.toLowerCase()}`);
+    this.toast.show(`${this.i18n.translate('dateRange')}: ${this.i18n.translate(range)}`);
   }
 
   toggleComparison(event: Event): void {
     event.stopPropagation();
     this.comparisonEnabled.update((enabled) => !enabled);
-    this.toast.show(this.comparisonEnabled() ? 'Comparação ativada' : 'Comparação desativada');
+    this.loadDashboard();
+    this.toast.show(this.i18n.translate(this.comparisonEnabled() ? 'compareEnabled' : 'compareDisabled'));
+  }
+
+  toggleSeries(series: 'allowed' | 'blocked'): void {
+    this.visibleSeries.update((visible) => ({ ...visible, [series]: !visible[series] }));
   }
 
   createPolicy(event: Event): void {
@@ -634,30 +777,6 @@ export class DashboardComponent implements OnInit {
   refreshUsage(): void {
     if (this.refreshing() || this.state() === 'loading') return;
     this.refreshing.set(true);
-    this.toast.show('A atualizar dados...');
-
-    forkJoin({ summary: this.metricsService.summary(), events: this.eventService.list(0, 5) }).subscribe({
-      next: ({ summary, events }) => {
-        this.summary = summary;
-        this.events = events.content;
-        const total = summary.allowedRequests + summary.blockedRequests;
-        this.metrics = {
-          totalRequests: total,
-          allowedRequests: summary.allowedRequests,
-          blockedRequests: summary.blockedRequests,
-          blockRate: total ? Math.round(summary.blockedRequests / total * 100) : 0,
-          activePolicies: summary.totalPolicies,
-          eventsTracked: total
-        };
-        this.state.set(total === 0 && this.events.length === 0 ? 'empty' : 'success');
-        this.refreshing.set(false);
-        this.toast.show('Dados atualizados');
-      },
-      error: () => {
-        this.state.set('error');
-        this.refreshing.set(false);
-        this.toast.show('Erro ao atualizar dados');
-      }
-    });
+    this.loadDashboard(true);
   }
 }

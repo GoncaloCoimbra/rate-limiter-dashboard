@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { Bell, LucideAngularModule, Moon, Sun } from 'lucide-angular';
+import { Bell, LucideAngularModule, Menu, Moon, Sun, X } from 'lucide-angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { TranslationService } from '../shared/translation.service';
 import { ThemeService } from '../shared/theme.service';
+import { MobileNavigationService } from '../shared/mobile-navigation.service';
 
 @Component({
   selector: 'app-topbar',
@@ -14,17 +15,18 @@ import { ThemeService } from '../shared/theme.service';
     <header class="topbar">
       <div class="breadcrumbs"><span>{{ i18n.translate('workspace') }}</span><b>›</b><strong>{{ i18n.translate(currentPage()) }}</strong></div>
       <div class="top-actions">
+        <button type="button" class="icon-button mobile-menu" [attr.aria-label]="i18n.translate(mobileNavigation.isOpen() ? 'closeNavigation' : 'openNavigation')" [attr.aria-expanded]="mobileNavigation.isOpen()" (click)="mobileNavigation.toggle()"><lucide-icon [img]="mobileNavigation.isOpen() ? X : Menu" size="18" /></button>
         <label class="search">⌕<input [placeholder]="i18n.translate('search')" /><kbd>⌘ K</kbd></label>
         <select class="locale" [value]="i18n.locale()" (change)="changeLocale($any($event.target).value)"><option value="pt">🇵🇹 PT ▾</option><option value="en">🇬🇧 EN ▾</option><option value="zh">🇨🇳 中文 ▾</option></select>
         <div class="notification-wrap">
-          <button class="icon-button" aria-label="Notificações" (click)="toggleNotifications()"><lucide-icon [img]="Bell" size="18" /></button>
+          <button class="icon-button" [attr.aria-label]="i18n.translate('notifications')" (click)="toggleNotifications()"><lucide-icon [img]="Bell" size="18" /></button>
           <div class="notification-panel" *ngIf="notificationsOpen()">
-            <div class="notification-header"><strong>Notificações <span>{{ unreadCount() }}</span></strong></div>
-            <div class="notification" [class.read]="notification.read" *ngFor="let notification of notifications"><i [style.background]="notification.read ? 'var(--muted)' : notification.color"></i><div><strong>{{ notification.title }}</strong><small>{{ notification.description }}</small></div><button class="dismiss" aria-label="Fechar notificação" (click)="dismissNotification(notification.id)">×</button></div>
-            <div class="notification-empty" *ngIf="!notifications.length">Sem notificações disponíveis.</div>
+            <div class="notification-header"><strong>{{ i18n.translate('notifications') }} <span>{{ unreadCount() }}</span></strong></div>
+            <div class="notification" [class.read]="notification.read" *ngFor="let notification of notifications"><i [style.background]="notification.read ? 'var(--muted)' : notification.color"></i><div><strong>{{ notification.title }}</strong><small>{{ notification.description }}</small></div><button class="dismiss" [attr.aria-label]="i18n.translate('closeNotification')" (click)="dismissNotification(notification.id)">×</button></div>
+            <div class="notification-empty" *ngIf="!notifications.length">{{ i18n.translate('noNotifications') }}</div>
           </div>
         </div>
-        <button class="icon-button" aria-label="Alternar tema" (click)="toggleTheme()"><lucide-icon [img]="isLight() ? Moon : Sun" size="18" /></button>
+        <button class="icon-button" [attr.aria-label]="i18n.translate('toggleTheme')" (click)="toggleTheme()"><lucide-icon [img]="isLight() ? Moon : Sun" size="18" /></button>
       </div>
     </header>
   `,
@@ -35,10 +37,13 @@ import { ThemeService } from '../shared/theme.service';
 export class TopbarComponent {
   readonly i18n = inject(TranslationService);
   readonly theme = inject(ThemeService);
+  readonly mobileNavigation = inject(MobileNavigationService);
   private readonly router = inject(Router);
   readonly Bell = Bell;
   readonly Sun = Sun;
   readonly Moon = Moon;
+  readonly Menu = Menu;
+  readonly X = X;
   readonly notificationsOpen = signal(false);
   readonly isLight = this.theme.isLight;
   notifications: { id: number; title: string; description: string; color: string; read: boolean }[] = [];

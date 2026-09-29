@@ -5,6 +5,7 @@ public class ApiKeyResponse {
     private String name;
     private String key;
     private String maskedKey;
+    private String policyName;
     private String status;
     private String createdAt;
 
@@ -16,6 +17,8 @@ public class ApiKeyResponse {
     public void setKey(String key) { this.key = key; }
     public String getMaskedKey() { return maskedKey; }
     public void setMaskedKey(String maskedKey) { this.maskedKey = maskedKey; }
+    public String getPolicyName() { return policyName; }
+    public void setPolicyName(String policyName) { this.policyName = policyName; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getCreatedAt() { return createdAt; }

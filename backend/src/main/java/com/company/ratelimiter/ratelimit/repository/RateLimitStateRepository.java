@@ -13,6 +13,8 @@ import jakarta.persistence.LockModeType;
 
 public interface RateLimitStateRepository extends JpaRepository<RateLimitStateEntity, Long> {
 
+    boolean existsByStateKey(String stateKey);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select state from RateLimitStateEntity state where state.stateKey = :stateKey")
     Optional<RateLimitStateEntity> findForUpdate(@Param("stateKey") String stateKey);

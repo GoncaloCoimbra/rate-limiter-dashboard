@@ -7,6 +7,7 @@ import { TopbarComponent } from './shell/topbar.component';
 import { CommonModule } from '@angular/common';
 import { ToastService } from './shared/toast.service';
 import { AuthService } from './auth/auth.service';
+import { TranslationService } from './shared/translation.service';
 
 @Component({
   selector: 'app-root',
@@ -16,6 +17,8 @@ import { AuthService } from './auth/auth.service';
 })
 export class AppComponent {
   readonly toast = inject(ToastService);
+  readonly i18n = inject(TranslationService);
+  readonly currentYear = new Date().getFullYear();
   private readonly auth = inject(AuthService);
   readonly authRoute = signal(false);
   title = 'Rate Limiter Dashboard';

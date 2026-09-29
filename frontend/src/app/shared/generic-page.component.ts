@@ -1,12 +1,12 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
-import { Copy, Download, Eye, LucideAngularModule, Power, SlidersHorizontal, Trash2 } from 'lucide-angular';
+import { Copy, Download, Eye, LucideAngularModule, Power, Search, SlidersHorizontal, Trash2 } from 'lucide-angular';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ToastService } from './toast.service';
+import { TranslationService } from './translation.service';
 
-export interface GenericRow { resource: string; policy: string; status: string; usage: number; method?: string; limit?: string; scope?: string; algorithm?: string; key?: string; }
+export interface GenericRow { resource: string; policy: string; status: string; usage: number; id?: number; method?: string; limit?: string; scope?: string; algorithm?: string; key?: string; }
 
 @Component({
   selector: 'app-generic-page',
@@ -16,67 +16,67 @@ export interface GenericRow { resource: string; policy: string; status: string; 
     <section class="generic-page page-shell">
       <header class="page-header surface-card">
         <div>
-          <p>{{ eyebrow() }}</p>
-          <h1>{{ title() }}</h1>
-          <span>{{ description() }}</span>
+          <p>{{ i18n.translateText(eyebrow()) }}</p>
+          <h1>{{ i18n.translateText(title()) }}</h1>
+          <span>{{ i18n.translateText(description()) }}</span>
         </div>
-        <button *ngIf="actionLabel()" class="primary-button" (click)="runPrimaryAction()">＋ {{ actionLabel() }}</button>
+        <button *ngIf="actionLabel()" class="primary-button" (click)="runPrimaryAction()">＋ {{ i18n.translateText(actionLabel()) }}</button>
       </header>
       <div class="generic-layout">
         <div class="main-column">
           <article class="panel surface-card">
             <div class="panel-heading">
               <div>
-                <h2>{{ panelTitle() }}</h2>
-                <p>{{ panelSubtitle() }}</p>
+                <h2>{{ i18n.translateText(panelTitle()) }}</h2>
+                <p>{{ i18n.translateText(panelSubtitle()) }}</p>
               </div>
               <div class="panel-tools">
-                <label *ngIf="searchable()" class="search-box">⌕<input [value]="searchTerm()" (input)="onSearch($event)" placeholder="Pesquisar..." /></label>
-                <button *ngIf="searchable()" class="ghost-button" (click)="toggleFilter()">⚙ Filtrar</button>
-                <button *ngIf="searchable()" class="secondary-button" (click)="exportRows()">⇩ Exportar</button>
+                <label *ngIf="searchable()" class="search-box"><lucide-icon [img]="Search" size="14" aria-hidden="true" /><input [attr.aria-label]="i18n.translate('searchPlaceholder')" [value]="searchTerm()" (input)="onSearch($event)" [placeholder]="i18n.translate('searchPlaceholder')" /></label>
+                <button *ngIf="searchable()" type="button" class="ghost-button" [attr.aria-expanded]="filterOpen()" (click)="toggleFilter()"><lucide-icon [img]="SlidersHorizontal" size="14" aria-hidden="true" /> {{ i18n.translate('filter') }}</button>
+                <button *ngIf="searchable()" type="button" class="secondary-button" (click)="exportRows()"><lucide-icon [img]="Download" size="14" aria-hidden="true" /> {{ i18n.translate('export') }}</button>
               </div>
             </div>
 
             <div class="filter-row" *ngIf="filterOpen()">
-              <span>Estado:</span>
-              <button class="ghost-button" (click)="setStatus('All')">Todos</button>
-              <button class="ghost-button" (click)="setStatus('Active')">Ativas</button>
-              <button class="ghost-button" (click)="setStatus('Paused')">Pausadas</button>
+              <span>{{ i18n.translate('status') }}:</span>
+              <button class="ghost-button" (click)="setStatus('All')">{{ i18n.translate('all') }}</button>
+              <button class="ghost-button" (click)="setStatus('Active')">{{ i18n.translate('activeFilter') }}</button>
+              <button class="ghost-button" (click)="setStatus('Paused')">{{ i18n.translate('pausedFilter') }}</button>
             </div>
 
             <div class="data-state loading" *ngIf="loading()" role="status" aria-live="polite">
               <span class="state-icon" aria-hidden="true"><span class="state-pulse"></span></span>
               <div>
-                <strong>A carregar dados</strong>
-                <p>Estamos a sincronizar os dados mais recentes do workspace.</p>
+                <strong>{{ i18n.translate('loadingData') }}</strong>
+                <p>{{ i18n.translate('loadingDataHint') }}</p>
               </div>
             </div>
 
             <div class="data-state error" *ngIf="error()" role="alert">
               <span class="state-icon" aria-hidden="true">!</span>
               <div>
-                <strong>Não foi possível carregar os dados</strong>
-                <p>{{ error() }}</p>
+                <strong>{{ i18n.translate('errorLoadingData') }}</strong>
+                <p>{{ i18n.translateText(error() ?? '') }}</p>
               </div>
             </div>
 
             <div class="data-state empty" *ngIf="!loading() && !error() && visibleRows().length === 0">
               <span class="state-icon" aria-hidden="true">◎</span>
               <div>
-                <strong>Sem resultados para mostrar</strong>
-                <p>Não existem itens para este filtro ou pesquisa.</p>
+                <strong>{{ i18n.translate(emptyStateTitle()) }}</strong>
+                <p>{{ i18n.translate(emptyStateHint()) }}</p>
               </div>
             </div>
 
             <table *ngIf="!loading() && !error() && visibleRows().length > 0">
               <thead>
                 <tr>
-                  <th>{{ firstHeader() }}</th>
-                  <th>Política</th>
-                  <th>Estado</th>
-                  <th>Utilização</th>
-                  <th *ngIf="showDetails()">Detalhes</th>
-                  <th *ngIf="showActions()">Ações</th>
+                  <th>{{ i18n.translateText(firstHeader()) }}</th>
+                  <th>{{ i18n.translate('policyColumn') }}</th>
+                  <th>{{ i18n.translate('status') }}</th>
+                  <th>{{ i18n.translate('usage') }}</th>
+                  <th *ngIf="showDetails()">{{ i18n.translate('details') }}</th>
+                  <th *ngIf="showActions()">{{ i18n.translate('actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -86,16 +86,17 @@ export interface GenericRow { resource: string; policy: string; status: string; 
                     <strong>{{ row.resource }}</strong>
                     <small *ngIf="row.key">{{ row.key }}</small>
                   </td>
-                  <td>{{ row.policy }}</td>
-                  <td><span class="status-badge" [class.success]="row.status === 'Active'" [class.warning]="row.status === 'Paused'">{{ row.status === 'Active' ? 'Ativa' : 'Pausada' }}</span></td>
+                  <td>{{ i18n.translateText(row.policy) }}</td>
+                  <td><span class="status-badge" [class.success]="row.status === 'Active'" [class.warning]="row.status === 'Paused'">{{ i18n.translate(row.status === 'Active' ? 'active' : 'paused') }}</span></td>
                   <td><div class="usage-cell"><span>{{ row.usage }}%</span><div class="usage-track"><span [style.width.%]="row.usage"></span></div></div></td>
                   <td *ngIf="showDetails()">{{ row.limit || row.scope || '—' }}</td>
                   <td *ngIf="showActions()">
                     <div class="row-actions">
-                      <button aria-label="Editar" (click)="rowAction('Editar', row)"><lucide-icon [img]="SlidersHorizontal" size="15" /></button>
-                      <button aria-label="Copiar" (click)="rowAction('Copiar', row)"><lucide-icon [img]="Copy" size="15" /></button>
-                      <button aria-label="Ativar" (click)="rowAction('Ativar', row)"><lucide-icon [img]="Power" size="15" /></button>
-                      <button aria-label="Eliminar" (click)="rowAction('Eliminar', row)"><lucide-icon [img]="Trash2" size="15" /></button>
+                      <button *ngIf="rowActions().includes('edit')" [attr.aria-label]="i18n.translate('edit')" (click)="rowAction('edit', row)"><lucide-icon [img]="SlidersHorizontal" size="15" /></button>
+                      <button *ngIf="rowActions().includes('copy')" [attr.aria-label]="i18n.translate('copy')" (click)="rowAction('copy', row)"><lucide-icon [img]="Copy" size="15" /></button>
+                      <button *ngIf="rowActions().includes('activate')" [attr.aria-label]="i18n.translate('activate')" (click)="rowAction('activate', row)"><lucide-icon [img]="Power" size="15" /></button>
+                      <button *ngIf="rowActions().includes('revoke') && row.status === 'Active'" [attr.aria-label]="i18n.translate('revoke')" (click)="rowAction('revoke', row)"><lucide-icon [img]="Power" size="15" /></button>
+                      <button *ngIf="rowActions().includes('delete')" [attr.aria-label]="i18n.translate('delete')" (click)="rowAction('delete', row)"><lucide-icon [img]="Trash2" size="15" /></button>
                     </div>
                   </td>
                 </tr>
@@ -103,12 +104,6 @@ export interface GenericRow { resource: string; policy: string; status: string; 
             </table>
           </article>
         </div>
-        <aside class="side-note surface-card">
-          <span class="sparkle">✧</span>
-          <strong>Torne esta vista sua</strong>
-          <p>Configure a integração para adaptar esta área ao seu workspace.</p>
-          <button class="primary-button" (click)="router.navigate(['/definicoes'])">Configure a integração</button>
-        </aside>
       </div>
     </section>
   `,
@@ -118,11 +113,11 @@ export interface GenericRow { resource: string; policy: string; status: string; 
     .page-header p { color: var(--cyan); font-size: 10px; font-weight: 800; letter-spacing: .14em; margin: 0 0 9px; }
     .page-header h1 { font: 500 34px 'Space Grotesk'; margin: 0; letter-spacing: -.04em; }
     .page-header span { display: block; color: var(--muted); font-size: 14px; margin-top: 9px; }
-    .generic-layout { display: grid; grid-template-columns: minmax(0,1fr) 260px; gap: 18px; }
+    .generic-layout { display: block; }
     .panel { padding: 20px; }
     .panel-heading { display: flex; justify-content: space-between; align-items: start; gap: 15px; margin-bottom: 18px; }
     .panel h2 { font: 500 17px 'Space Grotesk'; margin: 0; }
-    .panel p, .side-note p { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
+    .panel p { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
     .panel-tools { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
     .panel-tools button, .search-box { height: 34px; border-radius: 8px; font-size: 11px; }
     .search-box { display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--muted); }
@@ -143,10 +138,6 @@ export interface GenericRow { resource: string; policy: string; status: string; 
     .usage-cell span { font-size: 12px; }
     .usage-track { display: block; width: 76px; height: 6px; border-radius: 99px; background: rgba(255,255,255,.05); overflow: hidden; }
     .usage-track span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
-    .side-note { padding: 20px; display: grid; gap: 12px; align-content: start; }
-    .side-note .sparkle { font-size: 28px; color: var(--cyan); }
-    .side-note strong { font-size: 18px; }
-    .side-note button { width: 100%; }
     .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.02); }
     .filter-row span { color: var(--muted); font-size: 11px; }
     .filter-row button { font-size: 11px; }
@@ -157,11 +148,11 @@ export interface GenericRow { resource: string; policy: string; status: string; 
     .state-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.03); font-weight: 700; }
     .state-pulse { display: block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--cyan); animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 0% { transform: scale(0.75); opacity: .65; } 70% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(0.75); opacity: .65; } }
-    @media (max-width: 980px) { .generic-layout { grid-template-columns: 1fr; } .page-header { display: grid; grid-template-columns: 1fr; align-items: start; } .panel-tools { flex-wrap: wrap; } }
+    @media (max-width: 980px) { .page-header { display: grid; grid-template-columns: 1fr; align-items: start; } .panel-tools { flex-wrap: wrap; } }
   `]
 })
 export class GenericPageComponent {
-  readonly router = inject(Router);
+  readonly i18n = inject(TranslationService);
   readonly toast = inject(ToastService);
   readonly filterOpen = signal(false);
   readonly statusFilter = signal('All');
@@ -174,16 +165,20 @@ export class GenericPageComponent {
   readonly description = input('');
   readonly panelTitle = input('Recursos ligados');
   readonly panelSubtitle = input('');
+  readonly emptyStateTitle = input('emptyResults');
+  readonly emptyStateHint = input('emptyResultsHint');
   readonly actionLabel = input('');
   readonly firstHeader = input('Recurso');
   readonly searchable = input(false);
   readonly showDetails = input(false);
   readonly showActions = input(false);
+  readonly rowActions = input<Array<'edit' | 'copy' | 'activate' | 'revoke' | 'delete'>>(['edit', 'copy', 'activate', 'delete']);
   readonly primaryActionRequested = output<void>();
   readonly rowActionRequested = output<{ action: string; row: GenericRow }>();
   readonly searchRequested = output<string>();
   readonly statusChanged = output<string>();
   readonly SlidersHorizontal = SlidersHorizontal;
+  readonly Search = Search;
   readonly Copy = Copy;
   readonly Power = Power;
   readonly Trash2 = Trash2;
@@ -232,13 +227,17 @@ export class GenericPageComponent {
   }
 
   exportRows(): void {
-    const csv = ['recurso,politica,estado,utilizacao', ...this.visibleRows().map((row) => `${row.resource},${row.policy},${row.status},${row.usage}%`)].join('\n');
+    const quote = (value: string): string => `"${value.replaceAll('"', '""')}"`;
+    const csv = [
+      ['resourceColumn', 'policyColumn', 'status', 'usage'].map((key) => quote(this.i18n.translate(key))).join(','),
+      ...this.visibleRows().map((row) => [row.resource, this.i18n.translateText(row.policy), this.i18n.translate(row.status === 'Active' ? 'active' : 'paused'), `${row.usage}%`].map(quote).join(','))
+    ].join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = `${this.title().toLowerCase().replaceAll(' ', '-')}.csv`;
     link.click();
-    URL.revokeObjectURL(url);
-    this.toast.show('Exportação concluída');
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    this.toast.show(this.i18n.translate('exportSucceeded'));
   }
 }

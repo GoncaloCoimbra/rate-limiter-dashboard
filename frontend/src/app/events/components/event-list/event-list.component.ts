@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { EventService, RateEventItem } from '../../services/event.service';
+import { TranslationService } from '../../../shared/translation.service';
 
 @Component({
   selector: 'app-event-list',
@@ -8,10 +9,10 @@ import { EventService, RateEventItem } from '../../services/event.service';
   imports: [CommonModule],
   template: `
     <section>
-      <h2>Eventos</h2>
-      <p>Eventos recentes e decisões de bloqueio do rate limiter.</p>
+      <h2>{{ i18n.translate('events') }}</h2>
+      <p>{{ i18n.translate('eventsDescription') }}</p>
 
-      <p *ngIf="loading">A carregar eventos...</p>
+      <p *ngIf="loading">{{ i18n.translate('loadingEvents') }}</p>
       <ul class="event-list" *ngIf="!loading">
         <li *ngFor="let event of events">
           <strong>{{ event.status }}</strong>
@@ -19,10 +20,10 @@ import { EventService, RateEventItem } from '../../services/event.service';
           <small>{{ event.reason }} · {{ event.ipAddress }}</small>
         </li>
       </ul>
-      <nav class="pager" *ngIf="totalPages > 0" aria-label="Paginação de eventos">
-        <button type="button" (click)="previousPage()" [disabled]="page === 0">Anterior</button>
-        <span>Página {{ page + 1 }} de {{ totalPages }} · {{ totalElements }} eventos</span>
-        <button type="button" (click)="nextPage()" [disabled]="page + 1 >= totalPages">Seguinte</button>
+      <nav class="pager" *ngIf="totalPages > 0" [attr.aria-label]="i18n.translate('events')">
+        <button type="button" (click)="previousPage()" [disabled]="page === 0">{{ i18n.translate('previous') }}</button>
+        <span>{{ page + 1 }} / {{ totalPages }} · {{ totalElements }} {{ i18n.translate('events').toLowerCase() }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="page + 1 >= totalPages">{{ i18n.translate('next') }}</button>
       </nav>
     </section>
   `,
@@ -38,6 +39,7 @@ import { EventService, RateEventItem } from '../../services/event.service';
   ]
 })
 export class EventListComponent implements OnInit {
+  readonly i18n = inject(TranslationService);
   private readonly eventService = inject(EventService);
   events: RateEventItem[] = [];
   page = 0;

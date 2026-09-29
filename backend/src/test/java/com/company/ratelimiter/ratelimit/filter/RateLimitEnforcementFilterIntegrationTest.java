@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +33,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import com.company.ratelimiter.access.entity.ApiKey;
 import com.company.ratelimiter.access.repository.ApiKeyRepository;
 import com.company.ratelimiter.event.repository.EventRepository;
+import com.company.ratelimiter.metrics.dto.MetricsQueryDto;
+import com.company.ratelimiter.metrics.service.MetricsService;
 import com.company.ratelimiter.policy.entity.EnvironmentType;
 import com.company.ratelimiter.policy.entity.PolicyAlgorithm;
 import com.company.ratelimiter.policy.entity.PolicyStatus;
@@ -77,6 +83,9 @@ class RateLimitEnforcementFilterIntegrationTest {
         @Autowired
         private RateLimitStateRepository stateRepository;
 
+        @Autowired
+        private MetricsService metricsService;
+
         private static ExecutorService executor;
         private String apiKeyValue;
 
@@ -115,7 +124,7 @@ class RateLimitEnforcementFilterIntegrationTest {
                 ApiKey apiKey = new ApiKey();
                 apiKey.setOwnerUsername("admin");
                 apiKey.setName("MySQL concurrency test key");
-                apiKey.setKeyValue(apiKeyValue);
+                apiKey.setKeyValue(hashApiKey(apiKeyValue));
                 apiKey.setStatus("ACTIVE");
                 apiKey.setRatePolicy(policy);
                 apiKeyRepository.saveAndFlush(apiKey);
@@ -159,6 +168,23 @@ class RateLimitEnforcementFilterIntegrationTest {
                 assertThat(eventRepository.findAll().stream().filter(event -> "ALLOWED".equals(event.getStatus())).count()).isEqualTo(5);
                 assertThat(eventRepository.findAll().stream().filter(event -> "BLOCKED".equals(event.getStatus())).count()).isEqualTo(15);
                 assertThat(eventRepository.findAll()).allMatch(event -> "admin".equals(event.getOwnerUsername()));
+
+                long rangeEnd = System.currentTimeMillis();
+                MetricsQueryDto query = new MetricsQueryDto();
+                query.setFrom(rangeEnd - 30L * 24 * 60 * 60 * 1000);
+                query.setTo(rangeEnd + 30L * 24 * 60 * 60 * 1000);
+
+                var series = metricsService.getTrafficSeries(query, "admin");
+                assertThat(series).hasSize(1);
+                assertThat(series.get(0).allowedRequests()).isEqualTo(5);
+                assertThat(series.get(0).blockedRequests()).isEqualTo(15);
+
+                var endpoints = metricsService.getEndpointActivity(query, "admin", 5);
+                assertThat(endpoints).hasSize(1);
+                assertThat(endpoints.get(0).endpoint()).isEqualTo("GET /api/public/ping");
+                assertThat(endpoints.get(0).requestCount()).isEqualTo(requestCount);
+                assertThat(endpoints.get(0).blockedRequests()).isEqualTo(15);
+                assertThat(metricsService.getTrafficSeries(query, "another-owner")).isEmpty();
         }
 
         private static void await(CountDownLatch start) {
@@ -166,6 +192,14 @@ class RateLimitEnforcementFilterIntegrationTest {
                         start.await();
                 } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
+                        throw new IllegalStateException(exception);
+                }
+        }
+
+        private static String hashApiKey(String value) {
+                try {
+                        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+                } catch (NoSuchAlgorithmException exception) {
                         throw new IllegalStateException(exception);
                 }
         }
